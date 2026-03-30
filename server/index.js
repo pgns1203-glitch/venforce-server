@@ -613,7 +613,7 @@ app.post("/auth/login", async (req, res) => {
     }
 
     const senhaSalva = user.password || user.senha || "";
-    const valid = await bcrypt.compare(senha, senhaSalva);
+    const valid = senha === senhaSalva;
 
     if (!valid) {
       return res.status(401).json({
