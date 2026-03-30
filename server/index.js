@@ -434,7 +434,7 @@ const upload = multer({
 // ROTAS BÁSICAS
 // ==========================
 app.get("/", (req, res) => {
-  res.sendFile(path.join(publicDir, "portal.html"));
+  res.send("API VenForce rodando 🚀");
 });
 
 app.get("/health", (req, res) => {
