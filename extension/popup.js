@@ -211,6 +211,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ==========================
   async function login(email, password) {
     clearLoginStatus();
+    
+console.log("LOGIN ENVIADO:", email, password);
 
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -226,6 +228,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let data = {};
     try {
       data = await response.json();
+      console.log("RESPOSTA DO BACKEND:", data);
     } catch (error) {
       data = {};
     }
