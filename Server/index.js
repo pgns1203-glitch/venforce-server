@@ -1363,4 +1363,6 @@ app.listen(PORT, () => {
   console.log(`GOOGLE_DRIVE_FOLDER_ID: ${DRIVE_FOLDER_ID || "(não configurado)"}`);
   console.log(`Drive client ativo: ${!!drive}`);
 });
-add callback route
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
