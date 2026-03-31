@@ -185,7 +185,7 @@ app.get("/auth/me", authMiddleware, (req, res) => {
 app.get("/bases", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT b.id, b.slug, b.nome, b.ativo FROM bases b
+      `SELECT b.id, b.slug, b.nome, b.ativo, b.created_at, b.updated_at FROM bases b
        JOIN user_bases ub ON ub.base_id = b.id
        WHERE ub.user_id = $1 AND b.ativo = true ORDER BY b.nome ASC`,
       [req.user.id]
