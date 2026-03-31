@@ -1,151 +1,119 @@
 const STORAGE_KEY = "vf-token";
-const API_BASE = "https://venforce-server.onrender.com";
-
-// ─── DOM ───
-const btnLogout     = document.getElementById("btn-logout");
-const btnRetry      = document.getElementById("btn-retry");
-const basesCount    = document.getElementById("bases-count");
-const basesTbody    = document.getElementById("bases-tbody");
-const stateLoading  = document.getElementById("state-loading");
-const stateTable    = document.getElementById("state-table");
-const stateEmpty    = document.getElementById("state-empty");
-const stateError    = document.getElementById("state-error");
-const errorMessage  = document.getElementById("error-message");
+const API_BASE    = "https://venforce-server.onrender.com";
 
 // ─── Sessão ───
-function getTokenOrRedirect() {
-  const token = localStorage.getItem(STORAGE_KEY);
-  if (!token) { window.location.replace("index.html"); return null; }
-  return token;
+function getToken() {
+  const t = localStorage.getItem(STORAGE_KEY);
+  if (!t) { window.location.replace("index.html"); return null; }
+  return t;
 }
+const TOKEN = getToken();
 
-const TOKEN = getTokenOrRedirect();
-
-function clearSessionAndGoLogin() {
+function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem("vf-user");
   window.location.replace("index.html");
 }
 
-// Preenche nome do usuário logado na navbar (se tiver o elemento)
-const userNameEl = document.getElementById("user-name");
-if (userNameEl) {
-  try {
-    const user = JSON.parse(localStorage.getItem("vf-user") || "{}");
-    userNameEl.textContent = user.nome || user.email || "";
-  } catch {}
+// ─── Nome do usuário ───
+try {
+  const user = JSON.parse(localStorage.getItem("vf-user") || "{}");
+  const el   = document.getElementById("user-name");
+  if (el) el.textContent = user.nome || user.email || "";
+} catch {}
+
+// ─── Helpers ───
+function escapeHTML(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
 }
 
-// ─── Estados da UI ───
+function setImportStatus(msg, color) {
+  const el = document.getElementById("import-status");
+  el.textContent    = msg;
+  el.style.color    = color || "var(--vf-text-m)";
+  el.style.display  = msg ? "block" : "none";
+}
+
+function setImportLoading(on) {
+  document.getElementById("btn-importar").disabled             = on;
+  document.getElementById("btn-importar-text").textContent     = on ? "Processando…" : "Pré-visualizar";
+  document.getElementById("btn-importar-spinner").style.display = on ? "inline-block" : "none";
+}
+
+// ─── Estados da tabela de bases ───
+const stateLoading = document.getElementById("state-loading");
+const stateTable   = document.getElementById("state-table");
+const stateEmpty   = document.getElementById("state-empty");
+const stateError   = document.getElementById("state-error");
+const basesCount   = document.getElementById("bases-count");
+const basesTbody   = document.getElementById("bases-tbody");
+
 function showLoading() {
   stateLoading.style.display = "flex";
-  stateTable.style.display   = "none";
-  stateEmpty.style.display   = "none";
-  stateError.style.display   = "none";
+  stateTable.style.display   = stateEmpty.style.display = stateError.style.display = "none";
 }
 function showTable() {
-  stateLoading.style.display = "none";
   stateTable.style.display   = "block";
-  stateEmpty.style.display   = "none";
-  stateError.style.display   = "none";
+  stateLoading.style.display = stateEmpty.style.display = stateError.style.display = "none";
 }
 function showEmpty() {
-  stateLoading.style.display = "none";
-  stateTable.style.display   = "none";
   stateEmpty.style.display   = "block";
-  stateError.style.display   = "none";
+  stateLoading.style.display = stateTable.style.display = stateError.style.display = "none";
   basesCount.style.display   = "none";
 }
-function showError(message) {
-  stateLoading.style.display = "none";
-  stateTable.style.display   = "none";
-  stateEmpty.style.display   = "none";
+function showError(msg) {
   stateError.style.display   = "block";
-  errorMessage.textContent   = message;
+  stateLoading.style.display = stateTable.style.display = stateEmpty.style.display = "none";
+  document.getElementById("error-message").textContent = msg;
 }
 
-// ─── Bases ───
+// ─── Carregar bases ───
 async function loadBases() {
   if (!TOKEN) return;
   showLoading();
-
   try {
-    const response = await fetch(`${API_BASE}/bases`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
-    });
-
-    if (response.status === 401) { clearSessionAndGoLogin(); return; }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const result = await response.json();
-    const bases = result.bases;
-
-    if (!Array.isArray(bases)) {
-      showError("Resposta inválida da API.");
-      return;
-    }
-
-    renderBases(bases);
+    const res = await fetch(`${API_BASE}/bases`, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    if (res.status === 401) { clearSession(); return; }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { bases } = await res.json();
+    renderBases(Array.isArray(bases) ? bases : []);
   } catch (err) {
-    console.error("Erro ao carregar bases:", err);
     showError("Não foi possível carregar as bases. Tente novamente.");
   }
 }
 
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 function renderBases(bases) {
   basesTbody.innerHTML = "";
-
   if (!bases.length) { showEmpty(); return; }
 
-  basesCount.textContent     = String(bases.length);
-  basesCount.style.display   = "inline-block";
+  basesCount.textContent   = String(bases.length);
+  basesCount.style.display = "inline-block";
 
-  bases.forEach((base, index) => {
-    const tr = document.createElement("tr");
+  bases.forEach((base, i) => {
+    const ativo = base.ativo !== false;
+    const tr    = document.createElement("tr");
     tr.classList.add("animate-fade-up");
-    tr.style.animationDelay = `${index * 0.04}s`;
-
-    // ← usa base.ativo (não base.ativa) e base.slug como ID
-    const ativo       = base.ativo !== false;
-    const statusLabel = ativo ? "Ativa" : "Inativa";
-    const statusClass = ativo ? "base-status--active" : "base-status--inactive";
-
+    tr.style.animationDelay = `${i * 0.04}s`;
     tr.innerHTML = `
-      <td style="color:var(--vf-text-l);font-family:var(--vf-mono);font-size:.8rem;">
-        ${String(index + 1).padStart(2, "0")}
-      </td>
+      <td style="color:var(--vf-text-l);font-family:var(--vf-mono);font-size:.8rem;">${String(i+1).padStart(2,"0")}</td>
       <td><strong>${escapeHTML(base.nome || "—")}</strong></td>
-      <td style="color:var(--vf-text-m);font-size:.875rem;font-family:var(--vf-mono);">
-        ${escapeHTML(base.slug || "—")}
+      <td style="color:var(--vf-text-m);font-size:.875rem;font-family:var(--vf-mono);">${escapeHTML(base.slug || "—")}</td>
+      <td style="text-align:center;">
+        <span class="${ativo ? "base-status--active" : "base-status--inactive"}">${ativo ? "Ativa" : "Inativa"}</span>
       </td>
       <td style="text-align:center;">
-        <span class="${statusClass}">${statusLabel}</span>
-      </td>
-      <td style="text-align:center;">
-        <button
-          class="vf-btn-danger-sm"
-          data-slug="${escapeHTML(base.slug)}"
-          data-nome="${escapeHTML(base.nome || base.slug)}"
-        >Excluir</button>
-      </td>
-    `;
-
+        <button class="vf-btn-danger-sm" data-slug="${escapeHTML(base.slug)}" data-nome="${escapeHTML(base.nome || base.slug)}">Excluir</button>
+      </td>`;
     basesTbody.appendChild(tr);
   });
 
-  // Eventos dos botões de excluir
   basesTbody.querySelectorAll(".vf-btn-danger-sm").forEach(btn => {
     btn.addEventListener("click", () => {
-      const slug = btn.dataset.slug;
-      const nome = btn.dataset.nome;
+      const { slug, nome } = btn.dataset;
       if (confirm(`Excluir permanentemente a base "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
-        deleteBase(slug);
+        deleteBase(slug, btn);
       }
     });
   });
@@ -153,78 +121,153 @@ function renderBases(bases) {
   showTable();
 }
 
-async function deleteBase(slug) {
+async function deleteBase(slug, btn) {
+  btn.disabled = true;
+  btn.textContent = "Excluindo…";
   try {
-    const response = await fetch(`${API_BASE}/bases/${encodeURIComponent(slug)}`, {
+    const res  = await fetch(`${API_BASE}/bases/${encodeURIComponent(slug)}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${TOKEN}` },
+      headers: { Authorization: `Bearer ${TOKEN}` }
     });
-
-    if (response.status === 401) { clearSessionAndGoLogin(); return; }
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.erro || `HTTP ${response.status}`);
-
-    loadBases(); // recarrega a lista
+    if (res.status === 401) { clearSession(); return; }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro || `HTTP ${res.status}`);
+    loadBases();
   } catch (err) {
-    alert("Erro ao excluir base: " + err.message);
+    alert("Erro ao excluir: " + err.message);
+    btn.disabled    = false;
+    btn.textContent = "Excluir";
   }
 }
 
-// ─── Usuários (seção separada, se existir na página) ───
-const usersTbody = document.getElementById("users-tbody");
-const usersCount = document.getElementById("users-count");
-
-async function loadUsers() {
-  if (!usersTbody) return;
-
-  try {
-    const response = await fetch(`${API_BASE}/admin/users`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
-    });
-
-    if (response.status === 401) { clearSessionAndGoLogin(); return; }
-    if (!response.ok) return;
-
-    const result = await response.json();
-    const users = result.users || [];
-
-    if (usersCount) {
-      usersCount.textContent   = String(users.length);
-      usersCount.style.display = "inline-block";
-    }
-
-    usersTbody.innerHTML = "";
-    users.forEach((user, index) => {
-      const tr = document.createElement("tr");
-      const ativo = user.ativo !== false;
-      tr.innerHTML = `
-        <td style="font-family:var(--vf-mono);font-size:.8rem;">${String(index + 1).padStart(2, "0")}</td>
-        <td><strong>${escapeHTML(user.nome || "—")}</strong></td>
-        <td style="font-size:.875rem;">${escapeHTML(user.email)}</td>
-        <td style="text-align:center;">
-          <span class="${ativo ? "base-status--active" : "base-status--inactive"}">${ativo ? "Ativo" : "Inativo"}</span>
-        </td>
-        <td style="font-size:.8rem;font-family:var(--vf-mono);">${escapeHTML(user.role || "user")}</td>
-      `;
-      usersTbody.appendChild(tr);
-    });
-  } catch (err) {
-    console.error("Erro ao carregar usuários:", err);
-  }
-}
-
-// ─── Ações ───
-btnLogout.addEventListener("click", () => {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem("vf-user");
-  window.location.replace("index.html");
+// ─── File input label ───
+document.getElementById("import-arquivo").addEventListener("change", (e) => {
+  const f = e.target.files?.[0];
+  document.getElementById("file-label-text").textContent = f ? f.name : "Escolher arquivo…";
+  document.getElementById("file-label").classList.toggle("has-file", !!f);
 });
 
-btnRetry.addEventListener("click", () => loadBases());
+// ─── Preview ───
+let pendingPreviewData = null; // guarda payload para confirmar depois
+
+function openPreview(payload) {
+  pendingPreviewData = payload;
+
+  document.getElementById("preview-meta").textContent =
+    `${payload.total} linhas · ${payload.idsDetectados} IDs válidos`;
+
+  const tbody = document.getElementById("preview-tbody");
+  tbody.innerHTML = "";
+  (payload.preview || []).forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="font-family:var(--vf-mono);font-size:.8rem;">${escapeHTML(String(r.id ?? ""))}</td>
+      <td style="text-align:right;">${r.custo_produto ?? 0}</td>
+      <td style="text-align:right;">${r.imposto_percentual ?? 0}</td>
+      <td style="text-align:right;">${r.taxa_fixa ?? 0}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const overlay = document.getElementById("preview-overlay");
+  overlay.style.display = "flex";
+}
+
+function closePreview() {
+  document.getElementById("preview-overlay").style.display = "none";
+  pendingPreviewData = null;
+}
+
+document.getElementById("preview-close").addEventListener("click",  closePreview);
+document.getElementById("preview-cancel").addEventListener("click", closePreview);
+
+// Fechar clicando fora do modal
+document.getElementById("preview-overlay").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("preview-overlay")) closePreview();
+});
+
+// ─── Confirmar importação ───
+document.getElementById("preview-confirm").addEventListener("click", async () => {
+  const arquivo = document.getElementById("import-arquivo").files?.[0];
+  const nome    = document.getElementById("import-nome").value.trim();
+  if (!arquivo || !nome) { closePreview(); return; }
+
+  document.getElementById("preview-confirm").disabled                 = true;
+  document.getElementById("preview-confirm-text").textContent        = "Importando…";
+  document.getElementById("preview-confirm-spinner").style.display   = "inline-block";
+
+  try {
+    const fd = new FormData();
+    fd.append("arquivo", arquivo);
+    fd.append("nomeBase", nome);
+    fd.append("confirmar", "true");
+
+    const res  = await fetch(`${API_BASE}/importar-base`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      body: fd
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) { clearSession(); return; }
+    if (!res.ok) throw new Error(data.erro || `HTTP ${res.status}`);
+
+    closePreview();
+    setImportStatus(`✓ ${data.mensagem || "Importado com sucesso!"} (${data.total ?? 0} produtos)`, "var(--vf-success)");
+    document.getElementById("import-nome").value    = "";
+    document.getElementById("import-arquivo").value = "";
+    document.getElementById("file-label-text").textContent = "Escolher arquivo…";
+    document.getElementById("file-label").classList.remove("has-file");
+    loadBases();
+
+  } catch (err) {
+    closePreview();
+    setImportStatus("Erro ao importar: " + err.message, "var(--vf-danger)");
+  } finally {
+    document.getElementById("preview-confirm").disabled                 = false;
+    document.getElementById("preview-confirm-text").textContent        = "Confirmar importação";
+    document.getElementById("preview-confirm-spinner").style.display   = "none";
+  }
+});
+
+// ─── Botão importar (pré-visualizar) ───
+document.getElementById("btn-importar").addEventListener("click", async () => {
+  const arquivo = document.getElementById("import-arquivo").files?.[0];
+  const nome    = document.getElementById("import-nome").value.trim();
+
+  setImportStatus("", "");
+  if (!nome)    { setImportStatus("Informe o nome da base.", "var(--vf-danger)"); return; }
+  if (!arquivo) { setImportStatus("Selecione um arquivo .xlsx ou .csv.", "var(--vf-danger)"); return; }
+
+  setImportLoading(true);
+
+  try {
+    const fd = new FormData();
+    fd.append("arquivo", arquivo);
+    fd.append("nomeBase", nome);
+    // sem "confirmar" → preview
+
+    const res  = await fetch(`${API_BASE}/importar-base`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      body: fd
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) { clearSession(); return; }
+    if (!res.ok) throw new Error(data.erro || `HTTP ${res.status}`);
+
+    openPreview(data);
+
+  } catch (err) {
+    setImportStatus("Erro: " + err.message, "var(--vf-danger)");
+  } finally {
+    setImportLoading(false);
+  }
+});
+
+// ─── Logout + Retry ───
+document.getElementById("btn-logout").addEventListener("click", clearSession);
+document.getElementById("btn-retry").addEventListener("click", loadBases);
 
 // ─── Init ───
-if (TOKEN) {
-  loadBases();
-  loadUsers();
-}
+if (TOKEN) loadBases();

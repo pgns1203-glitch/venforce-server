@@ -1,106 +1,115 @@
 const STORAGE_KEY = "vf-token";
 const API_BASE = "https://venforce-server.onrender.com";
 
-const form = document.getElementById("login-form");
-const emailInput = document.getElementById("email");
-const senhaInput = document.getElementById("senha");
-const btnLogin = document.getElementById("btn-login");
-const btnText = document.getElementById("btn-login-text");
-const btnSpinner = document.getElementById("btn-login-spinner");
-const alertBox = document.getElementById("login-error");
-const alertMsg = document.getElementById("login-error-msg");
-const yearSpan = document.getElementById("year");
-
-yearSpan.textContent = new Date().getFullYear();
-
+// ─── Redirect se já logado ───
 if (localStorage.getItem(STORAGE_KEY)) {
   window.location.replace("dashboard.html");
 }
 
-function showFormError(message) {
-  alertMsg.textContent = message;
-  alertBox.classList.add("show");
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// ─── Tabs ───
+function switchTab(tab) {
+  const isLogin = tab === "login";
+  document.getElementById("login-form").style.display    = isLogin ? "" : "none";
+  document.getElementById("register-form").style.display = isLogin ? "none" : "";
+  document.getElementById("tab-login").classList.toggle("active", isLogin);
+  document.getElementById("tab-register").classList.toggle("active", !isLogin);
+  document.getElementById("brand-subtitle").textContent  = isLogin
+    ? "Acesse o painel administrativo"
+    : "Crie sua conta gratuitamente";
+  hideAlert("error");
+  hideAlert("success");
 }
 
-function hideFormError() {
-  alertBox.classList.remove("show");
+// ─── Alertas ───
+function showAlert(type, msg) {
+  const box = document.getElementById(`form-${type}`);
+  document.getElementById(`form-${type}-msg`).textContent = msg;
+  box.classList.add("show");
+}
+function hideAlert(type) {
+  document.getElementById(`form-${type}`)?.classList.remove("show");
+}
+function hideAllAlerts() { hideAlert("error"); hideAlert("success"); }
+
+// ─── Loading de botão ───
+function setLoading(btnId, spinnerId, textId, loading, defaultText) {
+  document.getElementById(btnId).disabled = loading;
+  document.getElementById(textId).textContent = loading ? "Aguarde…" : defaultText;
+  document.getElementById(spinnerId).style.display = loading ? "inline-block" : "none";
 }
 
-function setButtonLoading(isLoading) {
-  btnLogin.disabled = isLoading;
-  btnText.textContent = isLoading ? "Entrando…" : "Entrar";
-  btnSpinner.style.display = isLoading ? "inline-block" : "none";
-}
-
-function validateFields() {
-  let valid = true;
-  emailInput.classList.remove("is-invalid");
-  senhaInput.classList.remove("is-invalid");
-  hideFormError();
-
-  const email = emailInput.value.trim();
-  if (!email) {
-    emailInput.classList.add("is-invalid");
-    showFormError("Preencha o campo de e-mail.");
-    valid = false;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailInput.classList.add("is-invalid");
-    showFormError("Formato de e-mail inválido.");
-    valid = false;
-  }
-
-  if (!senhaInput.value) {
-    senhaInput.classList.add("is-invalid");
-    if (valid) showFormError("Preencha o campo de senha.");
-    valid = false;
-  }
-
-  return valid;
-}
-
-form.addEventListener("submit", async function (e) {
+// ─── LOGIN ───
+document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!validateFields()) return;
+  hideAllAlerts();
 
-  setButtonLoading(true);
-  hideFormError();
+  const email = document.getElementById("login-email").value.trim();
+  const senha = document.getElementById("login-senha").value;
+
+  if (!email || !senha) { showAlert("error", "Preencha todos os campos."); return; }
+
+  setLoading("btn-login", "btn-login-spinner", "btn-login-text", true, "Entrar");
 
   try {
-    const response = await fetch(`${API_BASE}/auth/login`, {   // ← rota correta
+    const res  = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: emailInput.value.trim(),
-        password: senhaInput.value,                             // ← campo correto
-      }),
+      body: JSON.stringify({ email, password: senha }),
     });
+    const data = await res.json().catch(() => ({}));
 
-    let data = null;
-    try { data = await response.json(); } catch {}
-
-    if (!response.ok) {
-      showFormError(data?.erro || data?.message || "E-mail ou senha incorretos.");
-      setButtonLoading(false);
+    if (!res.ok) {
+      showAlert("error", data?.erro || data?.message || "E-mail ou senha incorretos.");
       return;
     }
 
-    if (!data?.token) {
-      showFormError("Resposta inválida: token não recebido.");
-      setButtonLoading(false);
-      return;
-    }
+    if (!data?.token) { showAlert("error", "Resposta inválida do servidor."); return; }
 
-    // Salva token E dados do usuário
     localStorage.setItem(STORAGE_KEY, data.token);
     localStorage.setItem("vf-user", JSON.stringify(data.user));
     window.location.replace("dashboard.html");
-
-  } catch (err) {
-    console.error("Erro no login:", err);
-    showFormError("Não foi possível conectar ao servidor.");
-    setButtonLoading(false);
+  } catch {
+    showAlert("error", "Não foi possível conectar ao servidor.");
+  } finally {
+    setLoading("btn-login", "btn-login-spinner", "btn-login-text", false, "Entrar");
   }
 });
 
-emailInput.addEventListener("input", () => { emailInput.classList.remove("is-invalid"); hideFormError(); });
-senhaInput.addEventListener("input", () => { senhaInput.classList.remove("is-invalid"); hideFormError(); });
+// ─── REGISTER ───
+document.getElementById("register-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hideAllAlerts();
+
+  const nome  = document.getElementById("reg-nome").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const senha = document.getElementById("reg-senha").value;
+
+  if (!nome || !email || !senha) { showAlert("error", "Preencha todos os campos."); return; }
+  if (senha.length < 6)          { showAlert("error", "A senha deve ter ao menos 6 caracteres."); return; }
+
+  setLoading("btn-register", "btn-register-spinner", "btn-register-text", true, "Criar conta");
+
+  try {
+    const res  = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome, email, password: senha }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showAlert("error", data?.erro || data?.message || "Erro ao criar conta.");
+      return;
+    }
+
+    showAlert("success", "Conta criada! Faça login para continuar.");
+    document.getElementById("register-form").reset();
+    setTimeout(() => switchTab("login"), 1800);
+  } catch {
+    showAlert("error", "Não foi possível conectar ao servidor.");
+  } finally {
+    setLoading("btn-register", "btn-register-spinner", "btn-register-text", false, "Criar conta");
+  }
+});
