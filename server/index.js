@@ -127,6 +127,12 @@ app.get("/setup", async (req, res) => {
         UNIQUE (base_id, produto_id)
       );
     `);
+    
+    await pool.query(`
+  ALTER TABLE bases 
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+`);
+    
     res.json({ ok: true, mensagem: "Tabelas criadas com sucesso" });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
