@@ -7,6 +7,7 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const jwt = require("jsonwebtoken");
 const path = require("path");
+const crypto = require("crypto");
 const pool = require("./config/database");
 
 const app = express();
@@ -79,6 +80,10 @@ function parsePlanilha(buffer, originalName) {
   return resultado;
 }
 
+function gerarApiKey() {
+  return "vf_" + crypto.randomBytes(32).toString("hex");
+}
+
 // AUTH MIDDLEWARE
 async function authMiddleware(req, res, next) {
   try {
@@ -102,6 +107,24 @@ function requireAdmin(req, res, next) {
     return res.status(403).json({ ok: false, erro: "Acesso restrito a administradores." });
   }
   next();
+}
+
+async function apiKeyMiddleware(req, res, next) {
+  try {
+    const key = req.headers["x-api-key"] || req.query.api_key;
+    if (!key) return res.status(401).json({ ok: false, erro: "API Key não informada." });
+    const result = await pool.query(
+      "SELECT * FROM clientes WHERE api_key = $1 AND ativo = true",
+      [key]
+    );
+    if (!result.rows.length) {
+      return res.status(401).json({ ok: false, erro: "API Key inválida ou inativa." });
+    }
+    req.cliente = result.rows[0];
+    next();
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
 }
 
 // ROTAS BÁSICAS
@@ -132,6 +155,24 @@ app.get("/setup", async (req, res) => {
         produto_id TEXT NOT NULL, custo_produto NUMERIC NOT NULL DEFAULT 0,
         imposto_percentual NUMERIC NOT NULL DEFAULT 0, taxa_fixa NUMERIC NOT NULL DEFAULT 0,
         UNIQUE (base_id, produto_id)
+      );
+      CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        nome TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        api_key TEXT UNIQUE NOT NULL,
+        ativo BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS callbacks (
+        id SERIAL PRIMARY KEY,
+        cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+        cliente_nome TEXT,
+        base_slug TEXT,
+        status_code INTEGER,
+        duracao_ms INTEGER,
+        ip TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     
@@ -186,6 +227,51 @@ app.post("/auth/login", async (req, res) => {
 app.get("/auth/me", authMiddleware, (req, res) => {
   const u = req.user;
   res.json({ ok: true, user: { id: u.id, nome: u.nome, email: u.email, ativo: u.ativo, role: u.role } });
+});
+
+app.get("/api/bases/:baseSlug", apiKeyMiddleware, async (req, res) => {
+  try {
+    const inicio = Date.now();
+    const slug = normalizarSlug(req.params.baseSlug);
+    const baseResult = await pool.query(
+      "SELECT id, nome, slug FROM bases WHERE slug = $1 AND ativo = true",
+      [slug]
+    );
+    if (!baseResult.rows.length) {
+      await pool.query(
+        `INSERT INTO callbacks (cliente_id, cliente_nome, base_slug, status_code, duracao_ms, ip)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [req.cliente.id, req.cliente.nome, slug, 404, 0,
+         req.headers["x-forwarded-for"] || req.socket.remoteAddress]
+      ).catch(() => {});
+      return res.status(404).json({ ok: false, erro: "Base não encontrada." });
+    }
+    const base = baseResult.rows[0];
+    const custos = await pool.query(
+      "SELECT produto_id, custo_produto, imposto_percentual, taxa_fixa FROM custos WHERE base_id = $1",
+      [base.id]
+    );
+    const dados = {};
+    for (const row of custos.rows) {
+      dados[row.produto_id] = {
+        custo_produto: parseFloat(row.custo_produto),
+        imposto_percentual: parseFloat(row.imposto_percentual),
+        taxa_fixa: parseFloat(row.taxa_fixa)
+      };
+    }
+    const duracao = Date.now() - inicio;
+
+    await pool.query(
+      `INSERT INTO callbacks (cliente_id, cliente_nome, base_slug, status_code, duracao_ms, ip)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [req.cliente.id, req.cliente.nome, slug, 200, duracao,
+       req.headers["x-forwarded-for"] || req.socket.remoteAddress]
+    ).catch(() => {});
+
+    res.json({ ok: true, baseId: base.slug, nome: base.nome, total: custos.rows.length, dados });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
 });
 
 // LISTAR BASES
@@ -317,6 +403,98 @@ app.get("/admin/users", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query("SELECT id, nome, email, ativo, role, created_at FROM users ORDER BY id ASC");
     res.json({ ok: true, users: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.get("/clientes", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, nome, slug, api_key, ativo, created_at FROM clientes ORDER BY created_at DESC"
+    );
+    res.json({ ok: true, clientes: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.post("/clientes", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { nome, slug } = req.body;
+    if (!nome || !slug) {
+      return res.status(400).json({ ok: false, erro: "Nome e slug são obrigatórios." });
+    }
+    const slugNorm = normalizarSlug(slug);
+    const apiKey = gerarApiKey();
+    const result = await pool.query(
+      `INSERT INTO clientes (nome, slug, api_key)
+       VALUES ($1, $2, $3)
+       RETURNING id, nome, slug, api_key, ativo, created_at`,
+      [nome.trim(), slugNorm, apiKey]
+    );
+    res.status(201).json({ ok: true, cliente: result.rows[0] });
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({ ok: false, erro: "Slug já cadastrado. Use outro nome." });
+    }
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.delete("/clientes/:slug", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const slug = normalizarSlug(req.params.slug);
+    const result = await pool.query(
+      "DELETE FROM clientes WHERE slug = $1 RETURNING id",
+      [slug]
+    );
+    if (!result.rows.length) {
+      return res.status(404).json({ ok: false, erro: "Cliente não encontrado." });
+    }
+    res.json({ ok: true, mensagem: "Cliente removido com sucesso." });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.get("/callbacks", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { base, status, de, ate, page = 1 } = req.query;
+    const limit = 20;
+    const offset = (parseInt(page) - 1) * limit;
+    const condicoes = [];
+    const valores = [];
+    let i = 1;
+
+    if (base) { condicoes.push(`base_slug = $${i++}`); valores.push(base); }
+    if (status === "sucesso") { condicoes.push(`status_code BETWEEN 200 AND 299`); }
+    if (status === "erro") { condicoes.push(`status_code >= 400`); }
+    if (de) { condicoes.push(`created_at >= $${i++}`); valores.push(de); }
+    if (ate) { condicoes.push(`created_at <= $${i++}`); valores.push(ate + " 23:59:59"); }
+
+    const where = condicoes.length ? "WHERE " + condicoes.join(" AND ") : "";
+
+    const result = await pool.query(
+      `SELECT id, cliente_nome, base_slug, status_code, duracao_ms, ip, created_at
+       FROM callbacks ${where}
+       ORDER BY created_at DESC
+       LIMIT $${i++} OFFSET $${i++}`,
+      [...valores, limit, offset]
+    );
+
+    const total = await pool.query(
+      `SELECT COUNT(*) FROM callbacks ${where}`,
+      valores
+    );
+
+    res.json({
+      ok: true,
+      callbacks: result.rows,
+      total: parseInt(total.rows[0].count),
+      page: parseInt(page),
+      totalPages: Math.ceil(parseInt(total.rows[0].count) / limit)
+    });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
   }
