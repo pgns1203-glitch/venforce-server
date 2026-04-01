@@ -97,6 +97,13 @@ async function authMiddleware(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ ok: false, erro: "Acesso restrito a administradores." });
+  }
+  next();
+}
+
 // ROTAS BÁSICAS
 app.get("/", (req, res) => res.send("API VenForce rodando 🚀"));
 app.get("/health", (req, res) => res.json({ ok: true, mensagem: `VENFORCE OK porta ${PORT}` }));
@@ -185,10 +192,7 @@ app.get("/auth/me", authMiddleware, (req, res) => {
 app.get("/bases", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT b.id, b.slug, b.nome, b.ativo, b.created_at, b.updated_at FROM bases b
-       JOIN user_bases ub ON ub.base_id = b.id
-       WHERE ub.user_id = $1 AND b.ativo = true ORDER BY b.nome ASC`,
-      [req.user.id]
+      "SELECT id, slug, nome, ativo, created_at, updated_at FROM bases ORDER BY created_at DESC"
     );
     res.json({ ok: true, bases: result.rows });
   } catch (err) {
@@ -247,7 +251,7 @@ app.post("/importar-base", authMiddleware, upload.single("arquivo"), async (req,
     try {
       await client.query("BEGIN");
       const baseResult = await client.query(
-        `INSERT INTO bases (slug, nome) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET nome = EXCLUDED.nome, ativo = true RETURNING id`,
+        `INSERT INTO bases (slug, nome) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET nome = EXCLUDED.nome, ativo = true, updated_at = CURRENT_TIMESTAMP RETURNING id`,
         [slug, nomeBaseOriginal]
       );
       const baseId = baseResult.rows[0].id;
@@ -313,6 +317,56 @@ app.get("/admin/users", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query("SELECT id, nome, email, ativo, role, created_at FROM users ORDER BY id ASC");
     res.json({ ok: true, users: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.get("/usuarios", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, nome, email, role, ativo, created_at FROM users ORDER BY created_at DESC"
+    );
+    res.json({ ok: true, usuarios: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.patch("/usuarios/:id", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) {
+      return res.status(400).json({ ok: false, erro: "Você não pode alterar sua própria conta por aqui." });
+    }
+    const { ativo, role } = req.body;
+    const campos = [];
+    const valores = [];
+    let i = 1;
+    if (ativo !== undefined) { campos.push(`ativo = $${i++}`); valores.push(ativo); }
+    if (role !== undefined) { campos.push(`role = $${i++}`); valores.push(role); }
+    if (!campos.length) return res.status(400).json({ ok: false, erro: "Nenhum campo para atualizar." });
+    valores.push(targetId);
+    const result = await pool.query(
+      `UPDATE users SET ${campos.join(", ")} WHERE id = $${i} RETURNING id, nome, email, role, ativo`,
+      valores
+    );
+    if (!result.rows.length) return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
+    res.json({ ok: true, usuario: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.delete("/usuarios/:id", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) {
+      return res.status(400).json({ ok: false, erro: "Você não pode remover sua própria conta." });
+    }
+    const result = await pool.query("DELETE FROM users WHERE id = $1 RETURNING id", [targetId]);
+    if (!result.rows.length) return res.status(404).json({ ok: false, erro: "Usuário não encontrado." });
+    res.json({ ok: true, mensagem: "Usuário removido com sucesso." });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
   }
