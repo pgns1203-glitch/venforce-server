@@ -110,6 +110,7 @@ app.get("/setup", async (req, res) => {
         nome TEXT NOT NULL DEFAULT '', ativo BOOLEAN NOT NULL DEFAULT true,
         role TEXT NOT NULL DEFAULT 'user', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      
       CREATE TABLE IF NOT EXISTS bases (
         id SERIAL PRIMARY KEY, slug TEXT UNIQUE NOT NULL, nome TEXT NOT NULL,
         ativo BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -126,6 +127,12 @@ app.get("/setup", async (req, res) => {
         UNIQUE (base_id, produto_id)
       );
     `);
+    
+    await pool.query(`
+  ALTER TABLE bases 
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+`);
+    
     res.json({ ok: true, mensagem: "Tabelas criadas com sucesso" });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
@@ -178,7 +185,7 @@ app.get("/auth/me", authMiddleware, (req, res) => {
 app.get("/bases", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT b.id, b.slug, b.nome, b.ativo FROM bases b
+      `SELECT b.id, b.slug, b.nome, b.ativo, b.created_at, b.updated_at FROM bases b
        JOIN user_bases ub ON ub.base_id = b.id
        WHERE ub.user_id = $1 AND b.ativo = true ORDER BY b.nome ASC`,
       [req.user.id]

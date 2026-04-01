@@ -621,7 +621,7 @@ console.log("[VenForce] extensão iniciada");
     return { percentual, valor };
   }
 
-  function extrairFrete(row) {
+ function extrairFrete(row) {
   const t = getTextoLimpo(row);
 
   // 🔹 remove bloco do FLEX (continua igual)
@@ -631,7 +631,7 @@ console.log("[VenForce] extensão iniciada");
   );
 
   // ==========================
-  // 1. LAYOUT NOVO (SEU ATUAL)
+  // 1. LAYOUT NOVO 
   // ==========================
   let valor = buscarValorAposBloco(
     tSemFlex,
@@ -681,6 +681,7 @@ console.log("[VenForce] extensão iniciada");
 
   return 0;
 }
+
 
   function calcular(precoVenda, custoInfo, comissaoInfo, frete) {
     const custo = numeroSeguro(custoInfo?.custo_produto);

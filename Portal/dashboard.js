@@ -86,6 +86,7 @@ function renderBases(bases) {
   basesCount.style.display = "inline-block";
 
   bases.forEach((base, i) => {
+    const data = new Date(base.updated_at).toLocaleString();
     const ativo = base.ativo !== false;
     const tr    = document.createElement("tr");
     tr.classList.add("animate-fade-up");
@@ -94,6 +95,9 @@ function renderBases(bases) {
       <td style="color:var(--vf-text-l);font-family:var(--vf-mono);font-size:.8rem;">${String(i+1).padStart(2,"0")}</td>
       <td><strong>${escapeHTML(base.nome || "—")}</strong></td>
       <td style="color:var(--vf-text-m);font-size:.875rem;font-family:var(--vf-mono);">${escapeHTML(base.slug || "—")}</td>
+      <td style="font-size:.8rem;color:#888;">
+    ${data || "--"}
+  </td>
       <td style="text-align:center;">
         <span class="${ativo ? "base-status--active" : "base-status--inactive"}">${ativo ? "Ativa" : "Inativa"}</span>
       </td>
