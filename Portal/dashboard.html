@@ -10,31 +10,9 @@
 </head>
 <body class="vf-page">
 
-  <!-- NAVBAR -->
-  <nav class="vf-navbar">
-    <a href="dashboard.html" class="nav-brand">
-      <span class="nav-brand-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-      </span>
-      Venforce
-    </a>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span id="user-name" style="font-size:.875rem;color:var(--vf-text-m);"></span>
-      <button id="btn-logout" class="vf-btn-logout" title="Sair da conta">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        Sair
-      </button>
-    </div>
-  </nav>
-
   <!-- CONTEÚDO -->
-  <main class="vf-content">
+  <div class="vf-main-with-sidebar">
+    <main class="vf-content">
 
     <div class="vf-page-header">
       <h2>Dashboard</h2>
@@ -129,7 +107,8 @@
       </div>
     </div>
 
-  </main>
+    </main>
+  </div>
 
   <!-- ── MODAL PREVIEW ── -->
   <div id="preview-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:1.5rem;">
@@ -168,6 +147,7 @@
     </div>
   </div>
 
+  <script src="layout.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

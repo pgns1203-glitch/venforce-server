@@ -1,5 +1,6 @@
 const STORAGE_KEY = "vf-token";
 const API_BASE    = "https://venforce-server.onrender.com";
+initLayout();
 
 // ─── Sessão ───
 function getToken() {
@@ -14,13 +15,6 @@ function clearSession() {
   localStorage.removeItem("vf-user");
   window.location.replace("index.html");
 }
-
-// ─── Nome do usuário ───
-try {
-  const user = JSON.parse(localStorage.getItem("vf-user") || "{}");
-  const el   = document.getElementById("user-name");
-  if (el) el.textContent = user.nome || user.email || "";
-} catch {}
 
 // ─── Helpers ───
 function escapeHTML(s) {
@@ -266,7 +260,6 @@ document.getElementById("btn-importar").addEventListener("click", async () => {
 });
 
 // ─── Logout + Retry ───
-document.getElementById("btn-logout").addEventListener("click", clearSession);
 document.getElementById("btn-retry").addEventListener("click", loadBases);
 
 // ─── Init ───
