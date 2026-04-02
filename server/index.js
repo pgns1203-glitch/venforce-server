@@ -13,6 +13,9 @@ const pool = require("./config/database");
 const app = express();
 const PORT = process.env.PORT || 3333;
 const JWT_SECRET = process.env.JWT_SECRET || "venforce_secret_local";
+const ML_CLIENT_ID     = process.env.ML_CLIENT_ID     || "";
+const ML_CLIENT_SECRET = process.env.ML_CLIENT_SECRET || "";
+const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || "https://venforce-server.onrender.com/callback";
 
 // MIDDLEWARES
 app.use(cors({ origin: true, credentials: false, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"], allowedHeaders: ["Content-Type","Authorization"] }));
@@ -164,7 +167,7 @@ app.get("/setup", async (req, res) => {
         ativo BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-      CREATE TABLE IF NOT EXISTS callbacks (
+CREATE TABLE IF NOT EXISTS callbacks (
         id SERIAL PRIMARY KEY,
         cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
         cliente_nome TEXT,
@@ -174,8 +177,17 @@ app.get("/setup", async (req, res) => {
         ip TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-    `);
-    
+      CREATE TABLE IF NOT EXISTS ml_tokens (
+        id            SERIAL PRIMARY KEY,
+        ml_user_id    TEXT NOT NULL UNIQUE,
+        access_token  TEXT NOT NULL,
+        refresh_token TEXT NOT NULL,
+        expires_at    TIMESTAMP NOT NULL,
+        created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);   
+
     await pool.query(`
   ALTER TABLE bases 
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
@@ -547,6 +559,92 @@ app.delete("/usuarios/:id", authMiddleware, requireAdmin, async (req, res) => {
     res.json({ ok: true, mensagem: "Usuário removido com sucesso." });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+// ==========================
+// ML — INICIAR AUTORIZAÇÃO
+// ==========================
+app.get("/ml/conectar", (req, res) => {
+  if (!ML_CLIENT_ID) return res.status(500).send("ML_CLIENT_ID não configurado.");
+  const url = new URL("https://auth.mercadolivre.com.br/authorization");
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id",    ML_CLIENT_ID);
+  url.searchParams.set("redirect_uri", ML_REDIRECT_URI);
+  res.redirect(url.toString());
+});
+
+// ==========================
+// ML — CALLBACK
+// ==========================
+app.get("/callback", async (req, res) => {
+  const { code, error, error_description } = req.query;
+
+  if (error) {
+    return res.status(400).send(`
+      <html><body style="font-family:sans-serif;text-align:center;padding:3rem;background:#f8f9fc;">
+        <h2>❌ Autorização negada</h2>
+        <p style="color:#6b7280;">${error_description || error}</p>
+      </body></html>`);
+  }
+
+  if (!code) return res.status(400).send("Parâmetro 'code' não recebido.");
+
+  try {
+    const tokenRes = await fetch("https://api.mercadolibre.com/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type:    "authorization_code",
+        client_id:     ML_CLIENT_ID,
+        client_secret: ML_CLIENT_SECRET,
+        code,
+        redirect_uri:  ML_REDIRECT_URI
+      })
+    });
+
+    const data = await tokenRes.json();
+    console.log("[ML callback] resposta:", JSON.stringify(data));
+
+    if (!tokenRes.ok) {
+      return res.status(502).send(`
+        <html><body style="font-family:sans-serif;text-align:center;padding:3rem;background:#f8f9fc;">
+          <h2>❌ Erro ao obter token</h2>
+          <p style="color:#6b7280;">${data?.message || JSON.stringify(data)}</p>
+        </body></html>`);
+    }
+
+    const { access_token, refresh_token, user_id: mlUserId, expires_in } = data;
+    const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+    await pool.query(
+      `INSERT INTO ml_tokens (ml_user_id, access_token, refresh_token, expires_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (ml_user_id) DO UPDATE SET
+         access_token  = EXCLUDED.access_token,
+         refresh_token = EXCLUDED.refresh_token,
+         expires_at    = EXCLUDED.expires_at,
+         updated_at    = NOW()`,
+      [String(mlUserId), access_token, refresh_token, expiresAt]
+    );
+
+    console.log(`[ML callback] ✓ token salvo — ml_user_id: ${mlUserId}`);
+
+    return res.send(`
+      <html><body style="font-family:sans-serif;text-align:center;padding:3rem;background:#f8f9fc;">
+        <div style="max-width:420px;margin:0 auto;background:#fff;border-radius:16px;padding:2.5rem;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+          <div style="font-size:2.5rem;margin-bottom:1rem;">✅</div>
+          <h2 style="margin:0 0 .5rem;color:#2d2d2d;">Conta conectada!</h2>
+          <p style="color:#6b7280;margin:0 0 1rem;">Token salvo com sucesso.</p>
+          <p style="font-family:monospace;font-size:.8rem;color:#9ca3af;background:#f8f9fc;padding:.75rem;border-radius:8px;">
+            ML User ID: ${mlUserId}<br>
+            Expira em: ${expiresAt.toLocaleString("pt-BR")}
+          </p>
+        </div>
+      </body></html>`);
+
+  } catch (err) {
+    console.error("[ML callback] erro:", err);
+    return res.status(500).send("Erro interno: " + err.message);
   }
 });
 
