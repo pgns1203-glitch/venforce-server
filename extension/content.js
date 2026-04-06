@@ -520,10 +520,10 @@ console.log("[VenForce] extensão iniciada");
 
   async function finalizarScan(token) {
     try {
-      const t = String(token || "").trim();
-      if (!t) return;
-
       const sessao = await getScanSession();
+      const sessaoAuth = await getSessao();
+      const t = sessaoAuth?.token || String(token || "").trim();
+      if (!t) return;
       if (!sessao?.ativo) {
         alert("Nenhuma sessão de scan ativa.");
         return;
@@ -1297,15 +1297,16 @@ console.log("[VenForce] extensão iniciada");
 
     renderBox(box, id, dados, { precoCheio: precoInfo.precoCheio, precoPromocional: precoInfo.precoPromocional });
 
-    const token = getTokenLocalStorage();
-    if (token) {
-      const status = getStatusByMc(dados.mc)?.texto || "";
-      adicionarAnuncio(id, { mc: dados.mc, preco: dados.precoVenda, status });
-    }
-
     if (!podeUsarCache) box.__venforceCache = { id, dados, precoInfo };
     row.dataset.vfProcessed = "1";
 
+    chrome.storage.local.get(["token"], (s) => {
+      const token = s?.token || getTokenLocalStorage();
+      if (token) {
+        const status = getStatusByMc(dados.mc)?.texto || "";
+        adicionarAnuncio(id, { mc: dados.mc, preco: dados.precoVenda, status });
+      }
+    });
     return { key, box, row };
   }
 
