@@ -295,6 +295,35 @@ app.get("/scans", authMiddleware, async (req, res) => {
   }
 });
 
+app.delete("/scans/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, erro: "ID inválido." });
+    const result = await pool.query(
+      "DELETE FROM scans WHERE id = $1 AND user_id = $2 RETURNING id",
+      [id, req.user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ ok: false, erro: "Scan não encontrado." });
+    res.json({ ok: true, mensagem: "Scan removido." });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.delete("/scans", authMiddleware, async (req, res) => {
+  try {
+    const conta = String(req.query.conta || "").trim();
+    if (!conta) return res.status(400).json({ ok: false, erro: "Conta não informada." });
+    await pool.query(
+      "DELETE FROM scans WHERE conta_ml = $1 AND user_id = $2",
+      [conta, req.user.id]
+    );
+    res.json({ ok: true, mensagem: "Scans da conta removidos." });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
 app.get("/api/bases/:baseSlug", apiKeyMiddleware, async (req, res) => {
   try {
     const inicio = Date.now();

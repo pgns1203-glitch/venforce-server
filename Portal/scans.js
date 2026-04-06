@@ -82,6 +82,7 @@ function processarScans(scans) {
     const conta = (s?.conta_ml || "—").toString().trim() || "—";
     const createdAt = s?.created_at || s?.createdAt || s?.ts || s?.timestamp;
     const ts = createdAt ? new Date(createdAt).getTime() : NaN;
+    const scanId = s?.id;
 
     const total = Number(s?.total_anuncios ?? 0) || 0;
     const mc = Number(s?.mc_medio ?? 0) || 0;
@@ -112,6 +113,7 @@ function processarScans(scans) {
     agg._mcPeso += mc * total;
 
     const scanItem = {
+      id: scanId,
       created_at: createdAt || null,
       ts: Number.isFinite(ts) ? ts : null,
       total,
@@ -170,6 +172,7 @@ function renderContas(contasMap) {
 
     const scansId = `scans-${Math.random().toString(16).slice(2)}`;
     const btnId = `btn-${Math.random().toString(16).slice(2)}`;
+    const delContaId = `btn-del-conta-${conta}`;
 
     card.innerHTML = `
       <div class="vf-conta-header">
@@ -198,7 +201,10 @@ function renderContas(contasMap) {
 
       <div class="vf-conta-footer">
         <div>${escapeHTML(String(info.count || 0))} scans realizados · Último: ${escapeHTML(ultimoTxt)}</div>
-        <button type="button" class="vf-btn-secondary" id="${escapeHTML(btnId)}" style="padding:0.45rem 0.75rem;">Ver scans</button>
+        <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
+          <button type="button" class="vf-btn-secondary" id="${escapeHTML(btnId)}" style="padding:0.45rem 0.75rem;">Ver scans</button>
+          <button class="vf-btn-danger-sm" id="${escapeHTML(delContaId)}">🗑 Excluir todos</button>
+        </div>
       </div>
 
       <div class="vf-scans-lista" id="${escapeHTML(scansId)}"></div>
@@ -214,7 +220,41 @@ function renderContas(contasMap) {
       btn.textContent = open ? "Ocultar scans" : "Ver scans";
     });
 
+    document.getElementById(`btn-del-conta-${conta}`)
+      .addEventListener("click", async () => {
+        if (!confirm(`Excluir TODOS os scans de "${conta}"?`)) return;
+        try {
+          const res = await fetch(`${API_BASE}/scans?conta=${encodeURIComponent(conta)}`, {
+            method: "DELETE",
+            headers: { Authorization: "Bearer " + TOKEN }
+          });
+          const json = await res.json();
+          if (!json.ok) throw new Error(json.erro);
+          await loadScans();
+        } catch (err) {
+          alert("Erro: " + err.message);
+        }
+      });
+
     contasList.appendChild(card);
+  });
+
+  document.querySelectorAll("[data-scan-id]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-scan-id");
+      if (!confirm("Excluir este scan?")) return;
+      try {
+        const res = await fetch(`${API_BASE}/scans/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: "Bearer " + TOKEN }
+        });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.erro);
+        await loadScans();
+      } catch (err) {
+        alert("Erro: " + err.message);
+      }
+    });
   });
 
   showList();
@@ -225,6 +265,7 @@ function buildScansTable(scans) {
     const when = s?.created_at ? formatDate(s.created_at) : "—";
     const mc = Number(s?.mc_medio ?? 0) || 0;
     const cls = getMcBadgeClass(mc);
+    const scanId = s?.id;
     return `
       <tr>
         <td style="color:var(--vf-text-m);font-size:.875rem;">${escapeHTML(when)}</td>
@@ -233,6 +274,9 @@ function buildScansTable(scans) {
         <td style="text-align:right;color:var(--vf-text-m);font-family:var(--vf-mono);font-size:.8rem;">${escapeHTML(String(s?.saudaveis ?? 0))}</td>
         <td style="text-align:right;color:var(--vf-text-m);font-family:var(--vf-mono);font-size:.8rem;">${escapeHTML(String(s?.atencao ?? 0))}</td>
         <td style="text-align:right;color:var(--vf-text-m);font-family:var(--vf-mono);font-size:.8rem;">${escapeHTML(String(s?.criticos ?? 0))}</td>
+        <td style="text-align:right;">
+          <button class="vf-btn-danger-sm" data-scan-id="${escapeHTML(scanId)}">🗑</button>
+        </td>
       </tr>
     `;
   }).join("");
@@ -248,6 +292,7 @@ function buildScansTable(scans) {
             <th style="text-align:right;">Saudáveis</th>
             <th style="text-align:right;">Atenção</th>
             <th style="text-align:right;">Críticos</th>
+            <th style="text-align:right;">Ações</th>
           </tr>
         </thead>
         <tbody>
