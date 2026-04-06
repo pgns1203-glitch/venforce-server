@@ -890,32 +890,34 @@ console.log("[VenForce] extensão iniciada");
 
     root.appendChild(wrap);
 
-    const token = getTokenLocalStorage();
-    if (token) {
-      carregarBasesParaSelect(token);
-      atualizarScanUI();
-      const baseSel = root.getElementById("vf-scan-base");
-      if (baseSel) {
-        baseSel.addEventListener("change", () => {
-          const v = String(baseSel.value || "").trim();
-          if (v) setBaseSlugLocalStorage(v);
-          atualizarScanUI();
+    getSessao().then(sessaoAuth => {
+      const token = sessaoAuth?.token || "";
+      if (token) {
+        carregarBasesParaSelect(token);
+        atualizarScanUI();
+        const baseSel = root.getElementById("vf-scan-base");
+        if (baseSel) {
+          baseSel.addEventListener("change", () => {
+            const v = String(baseSel.value || "").trim();
+            if (v) setBaseSlugLocalStorage(v);
+            atualizarScanUI();
+          });
+        }
+        const contaIn = root.getElementById("vf-scan-conta");
+        if (contaIn) contaIn.addEventListener("input", () => atualizarScanUI());
+  
+        const btnFinish = root.getElementById("vf-btn-finish-scan");
+        if (btnFinish) btnFinish.addEventListener("click", async () => {
+          btnFinish.disabled = true;
+          await finalizarScan(getTokenLocalStorage());
+          btnFinish.disabled = false;
+        });
+        const btnReset = root.getElementById("vf-btn-reset-scan");
+        if (btnReset) btnReset.addEventListener("click", () => {
+          if (confirm("Resetar o scan acumulativo? Isso apaga os anúncios já acumulados.")) resetarScan();
         });
       }
-      const contaIn = root.getElementById("vf-scan-conta");
-      if (contaIn) contaIn.addEventListener("input", () => atualizarScanUI());
-
-      const btnFinish = root.getElementById("vf-btn-finish-scan");
-      if (btnFinish) btnFinish.addEventListener("click", async () => {
-        btnFinish.disabled = true;
-        await finalizarScan(getTokenLocalStorage());
-        btnFinish.disabled = false;
-      });
-      const btnReset = root.getElementById("vf-btn-reset-scan");
-      if (btnReset) btnReset.addEventListener("click", () => {
-        if (confirm("Resetar o scan acumulativo? Isso apaga os anúncios já acumulados.")) resetarScan();
-      });
-    }
+    });
 
     return overlay;
   }
