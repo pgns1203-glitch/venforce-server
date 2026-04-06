@@ -509,7 +509,9 @@ console.log("[VenForce] extensão iniciada");
       const sessao = storage?.[SCAN_SESSION_KEY];
       if (!sessao?.ativo) return;
       if (!sessao.anuncios) sessao.anuncios = {};
-      sessao.anuncios[anuncioId] = payload;
+      if (!sessao.anuncios[anuncioId]) {
+        sessao.anuncios[anuncioId] = payload;
+      }
       chrome.storage.local.set({ [SCAN_SESSION_KEY]: sessao }, () => {
         atualizarScanUI();
       });
@@ -537,6 +539,7 @@ console.log("[VenForce] extensão iniciada");
         return;
       }
 
+      console.log("[VenForce] finalizando scan:", { base_slug, conta_ml, ...m });
       const res = await fetch(`${API_BASE_URL}/scans`, {
         method: "POST",
         headers: {
@@ -553,6 +556,7 @@ console.log("[VenForce] extensão iniciada");
           criticos: m.criticos
         })
       });
+      console.log("[VenForce] POST /scans status:", res.status);
 
       const json = await res.json().catch(() => ({}));
       if (res.status === 401) {
