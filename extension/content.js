@@ -659,7 +659,8 @@ console.log("[VenForce] extensão iniciada");
     const root = getOverlayRoot();
     if (!root) return;
 
-    const token = getTokenLocalStorage();
+    const sessaoAuth = await getSessao();
+    const token = sessaoAuth?.token || getTokenLocalStorage();
     const box = root.getElementById("vf-scan-session-box");
     if (!box) return;
 
