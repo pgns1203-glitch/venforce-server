@@ -1381,6 +1381,15 @@ console.log("[VenForce] extensão iniciada");
   // MENSAGENS DO POPUP
   // ==========================
   chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.action === "VENFORCE_SET_TOKEN") {
+      chrome.storage.local.set({ 
+        token: msg.token,
+        venforce_user: msg.user 
+      }, () => {
+        console.log("[VenForce] token salvo via login portal");
+        scheduleFullReload();
+      });
+    }
     if (msg.action === "VENFORCE_EXPAND_ALL") {
       expandAllOnNextRender = true;
       scheduleProcess();

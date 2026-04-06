@@ -69,6 +69,15 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
     localStorage.setItem(STORAGE_KEY, data.token);
     localStorage.setItem("vf-user", JSON.stringify(data.user));
+    try {
+      if (chrome?.runtime?.sendMessage) {
+        chrome.runtime.sendMessage(
+          undefined,
+          { action: "VENFORCE_SET_TOKEN", token: data.token, user: data.user },
+          () => void chrome.runtime.lastError
+        );
+      }
+    } catch {}
     window.location.replace("dashboard.html");
   } catch {
     showAlert("error", "Não foi possível conectar ao servidor.");
