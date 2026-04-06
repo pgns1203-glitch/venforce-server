@@ -283,11 +283,7 @@ app.post("/scans", authMiddleware, async (req, res) => {
 app.get("/scans", authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM scans 
-       WHERE user_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT 100`,
-      [req.user.id]
+      `SELECT * FROM scans ORDER BY created_at DESC LIMIT 500`
     );
     res.json({ ok: true, scans: result.rows });
   } catch (err) {
@@ -295,30 +291,32 @@ app.get("/scans", authMiddleware, async (req, res) => {
   }
 });
 
-app.delete("/scans/:id", authMiddleware, async (req, res) => {
+app.delete("/scans/:id", authMiddleware, requireAdmin, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (!id) return res.status(400).json({ ok: false, erro: "ID inválido." });
     const result = await pool.query(
-      "DELETE FROM scans WHERE id = $1 AND user_id = $2 RETURNING id",
-      [id, req.user.id]
+      "DELETE FROM scans WHERE id = $1 RETURNING id",
+      [parseInt(req.params.id)]
     );
-    if (!result.rows.length) return res.status(404).json({ ok: false, erro: "Scan não encontrado." });
-    res.json({ ok: true, mensagem: "Scan removido." });
+    if (!result.rows.length) {
+      return res.status(404).json({ ok: false, erro: "Scan não encontrado." });
+    }
+    res.json({ ok: true, mensagem: "Scan excluído." });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
   }
 });
 
-app.delete("/scans", authMiddleware, async (req, res) => {
+app.delete("/scans", authMiddleware, requireAdmin, async (req, res) => {
   try {
-    const conta = String(req.query.conta || "").trim();
-    if (!conta) return res.status(400).json({ ok: false, erro: "Conta não informada." });
+    const conta = req.query.conta;
+    if (!conta) {
+      return res.status(400).json({ ok: false, erro: "Informe a conta." });
+    }
     await pool.query(
-      "DELETE FROM scans WHERE conta_ml = $1 AND user_id = $2",
-      [conta, req.user.id]
+      "DELETE FROM scans WHERE conta_ml = $1",
+      [conta]
     );
-    res.json({ ok: true, mensagem: "Scans da conta removidos." });
+    res.json({ ok: true, mensagem: "Scans da conta excluídos." });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
   }
