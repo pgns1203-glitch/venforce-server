@@ -825,6 +825,21 @@ console.log("[VenForce] extensão iniciada");
         atualizarScanUI();
       }
 
+      {
+        const root = getOverlayRoot();
+        const baseSel = root?.getElementById("vf-scan-base");
+        const contaIn = root?.getElementById("vf-scan-conta");
+        const baseSlug = String(baseSel?.value || "").trim();
+        const contaMl = String(contaIn?.value || "").trim();
+
+        if (baseSlug && contaMl) {
+          await iniciarScan(baseSlug, contaMl);
+        } else if (!baseSlug) {
+          alert("Selecione uma base antes de escanear.");
+          return;
+        }
+      }
+
       scanBtn.disabled = true;
       scanBtn.textContent = "Escaneando...";
       expandAllOnNextRender = true;
