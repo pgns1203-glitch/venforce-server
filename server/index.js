@@ -9,6 +9,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const crypto = require("crypto");
 const pool = require("./config/database");
+const { processarFechamento } = require("./utils/fechamento/process");
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -726,6 +727,28 @@ app.get("/callback", async (req, res) => {
   } catch (err) {
     console.error("[ML callback] erro:", err);
     return res.status(500).send("Erro interno: " + err.message);
+  }
+});
+
+app.post("/fechamentos/upload", upload.single("file"), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "Arquivo não enviado" });
+    }
+
+    const resultado = processarFechamento(req.file.buffer);
+
+    res.json({
+      ok: true,
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    });
   }
 });
 
