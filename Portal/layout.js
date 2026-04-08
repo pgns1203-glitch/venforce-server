@@ -92,6 +92,7 @@
       { label: "Extensão", href: "extensao.html", icon: "download", adminOnly: false },
       { label: "Dashboard", href: "dashboard.html", icon: "activity", adminOnly: false },
       { label: "Painel de análise de conversão", href: "fechamento.html", icon: "activity", adminOnly: false },
+      { label: "Fechamento Financeiro", href: "financeiro.html", icon: "activity", adminOnly: false },
       { label: "Clientes", href: "clientes.html", icon: "users", adminOnly: false },
       { label: "Callbacks", href: "callbacks.html", icon: "repeat", adminOnly: false },
       { label: "Usuários", href: "usuarios.html", icon: "shield", adminOnly: true },
