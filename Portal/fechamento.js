@@ -194,7 +194,7 @@ function renderTabContent() {
         <tr>
           <td>${escapeHTML(r.id ?? r.produtoId ?? "—")}</td>
           <td>${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
-          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(num(r.impressoes ?? r.impressions ?? 0))}</span></td>
+          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(num(r.valor ?? 0))}</span></td>
         </tr>
       `).join("");
       el.innerHTML = `
@@ -212,7 +212,7 @@ function renderTabContent() {
         <tr>
           <td>${escapeHTML(r.id ?? r.produtoId ?? "—")}</td>
           <td>${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
-          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(num(r.cliques ?? r.clicks ?? 0))}</span></td>
+          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(num(r.valor ?? 0))}</span></td>
         </tr>
       `).join("");
       el.innerHTML = `
@@ -230,7 +230,7 @@ function renderTabContent() {
         <tr>
           <td>${escapeHTML(r.id ?? r.produtoId ?? "—")}</td>
           <td>${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
-          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(pct(r.ctr ?? r.taxaCtr ?? 0))}</span></td>
+          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(pct(r.valor ?? 0))}</span></td>
         </tr>
       `).join("");
       el.innerHTML = `
@@ -248,7 +248,7 @@ function renderTabContent() {
         <tr>
           <td>${escapeHTML(r.id ?? r.produtoId ?? "—")}</td>
           <td>${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
-          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(pct(r.conversao ?? r.conversion ?? 0))}</span></td>
+          <td><span style="color:#c4b5fd;font-weight:800">${escapeHTML(pct(r.valor ?? 0))}</span></td>
         </tr>
       `).join("");
       el.innerHTML = `
@@ -406,4 +406,3 @@ document.querySelectorAll(".fc-tab").forEach((btn) => {
 // Estado inicial
 limparStats();
 renderTabContent();
-
