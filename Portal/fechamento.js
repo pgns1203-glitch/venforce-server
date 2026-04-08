@@ -4,7 +4,8 @@ function brl(v) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 }
 function pct(v) {
-  return ((v || 0) * 100).toFixed(2) + "%";
+  const val = v || 0;
+  return (val * 100).toFixed(2) + "%";
 }
 function num(v) {
   return new Intl.NumberFormat("pt-BR").format(v || 0);
@@ -109,11 +110,16 @@ function renderResumo() {
 }
 
 function renderTable(columns, rowsHtml) {
+  // columns pode vir como array de strings ou de objetos { html } para permitir <th> com estilos
+  const th = (Array.isArray(columns) ? columns : []).map((c) => {
+    if (c && typeof c === "object" && "html" in c) return String(c.html || "");
+    return `<th>${escapeHTML(String(c ?? ""))}</th>`;
+  }).join("");
   return `
     <div class="fc-table-wrap">
       <table class="fc-table">
         <thead>
-          <tr>${columns.map((c) => `<th>${escapeHTML(c)}</th>`).join("")}</tr>
+          <tr>${th}</tr>
         </thead>
         <tbody>
           ${rowsHtml || ""}
@@ -139,24 +145,36 @@ function renderTabContent() {
       const arr = Array.isArray(d.curvaAbcCompleta) ? d.curvaAbcCompleta : [];
       if (!arr.length) { el.innerHTML = '<div class="fc-empty">Nenhum dado para exibir.</div>'; return; }
 
-      const cols = ["ID", "Produto", "Fat.", "% Fat.", "Acum. Fat.", "Unid.", "% Unid.", "Acum. Unid.", "Curva Fat", "Curva Uni", "Final"];
+      const cols = [
+        { html: '<th style="width:130px;">ID</th>' },
+        { html: '<th style="width:260px;text-align:left;">Produto</th>' },
+        { html: '<th style="width:110px;text-align:right;">Fat.</th>' },
+        { html: '<th style="width:80px;text-align:right;">% Fat.</th>' },
+        { html: '<th style="width:90px;text-align:right;">Acum. Fat.</th>' },
+        { html: '<th style="width:70px;text-align:right;">Unid.</th>' },
+        { html: '<th style="width:80px;text-align:right;">% Unid.</th>' },
+        { html: '<th style="width:90px;text-align:right;">Acum. Unid.</th>' },
+        { html: '<th style="width:80px;text-align:center;">Curva Fat</th>' },
+        { html: '<th style="width:80px;text-align:center;">Curva Uni</th>' },
+        { html: '<th style="width:70px;text-align:center;">Final</th>' },
+      ];
       const rows = arr.map((r) => {
         const curvaFat = curvaBadge(r.curvaFat || r.curva_fat || r.curvaFaturamento);
         const curvaUni = curvaBadge(r.curvaUni || r.curva_uni || r.curvaUnidades);
         const final = escapeHTML(r.curvaFinal || r.curva_final || r.curva || "—");
         return `
           <tr>
-            <td>${escapeHTML(r.id ?? r.productId ?? r.produtoId ?? "—")}</td>
-            <td>${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
-            <td>${escapeHTML(brl(r.faturamento ?? r.fat ?? r.faturamentoTotalItem ?? 0))}</td>
-            <td>${escapeHTML(pct(r.percFat ?? r.pctFat ?? r.percentualFat ?? 0))}</td>
-            <td>${escapeHTML(pct(r.acumFat ?? r.acumuladoFat ?? 0))}</td>
-            <td>${escapeHTML(num(r.unidades ?? r.unid ?? r.unidadesPagas ?? 0))}</td>
-            <td>${escapeHTML(pct(r.percUnid ?? r.pctUnid ?? r.percentualUnid ?? 0))}</td>
-            <td>${escapeHTML(pct(r.acumUnid ?? r.acumuladoUnid ?? 0))}</td>
-            <td>${curvaFat}</td>
-            <td>${curvaUni}</td>
-            <td><span style="color:#c4b5fd;font-weight:800">${final}</span></td>
+            <td style="width:130px;white-space:nowrap;">${escapeHTML(r.id ?? r.productId ?? r.produtoId ?? "—")}</td>
+            <td class="fc-td-produto" style="width:260px;">${escapeHTML(r.produto ?? r.nome ?? r.titulo ?? "—")}</td>
+            <td class="fc-td-num" style="width:110px;">${escapeHTML(brl(r.faturamento ?? r.fat ?? r.faturamentoTotalItem ?? 0))}</td>
+            <td class="fc-td-num" style="width:80px;">${escapeHTML(pct(r.percentualFaturamento ?? r.percFat ?? r.pctFat ?? r.percentualFat ?? 0))}</td>
+            <td class="fc-td-num" style="width:90px;">${escapeHTML(pct(r.acumuladoFaturamento ?? r.acumFat ?? r.acumuladoFat ?? 0))}</td>
+            <td class="fc-td-num" style="width:70px;">${escapeHTML(num(r.unidadesTotais ?? r.unidades ?? r.unid ?? r.unidadesPagas ?? 0))}</td>
+            <td class="fc-td-num" style="width:80px;">${escapeHTML(pct(r.percentualUnidades ?? r.percUnid ?? r.pctUnid ?? r.percentualUnid ?? 0))}</td>
+            <td class="fc-td-num" style="width:90px;">${escapeHTML(pct(r.acumuladoUnidades ?? r.acumUnid ?? r.acumuladoUnid ?? 0))}</td>
+            <td class="fc-td-center" style="width:80px;">${curvaFat}</td>
+            <td class="fc-td-center" style="width:80px;">${curvaUni}</td>
+            <td class="fc-td-center" style="width:70px;"><span style="color:#c4b5fd;font-weight:800">${final}</span></td>
           </tr>
         `;
       }).join("");
