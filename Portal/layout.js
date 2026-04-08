@@ -82,6 +82,7 @@
   function buildNavLinks(user) {
     const links = [
       { label: "Dashboard", href: "dashboard.html", icon: "activity", adminOnly: false },
+      { label: "Fechamento", href: "fechamento.html", icon: "activity", adminOnly: false },
       { label: "Scans", href: "scans.html", icon: "bar-chart", adminOnly: false },
       { label: "Clientes", href: "clientes.html", icon: "users", adminOnly: false },
       { label: "Callbacks", href: "callbacks.html", icon: "repeat", adminOnly: false },
