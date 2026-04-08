@@ -1022,8 +1022,18 @@ function parseCostRows(rows) {
       taxPercent = taxPercent * 100;
     }
 
+    const modelIdRaw = findField(row, [
+      "model_id",
+      "modelid",
+      "model id",
+      "id modelo",
+      "modelo",
+    ]);
+    const modelId = normalizeIdNoPrefix(modelIdRaw);
+
     parsed.push({
       id,
+      modelId,
       cost,
       taxPercent,
     });
@@ -1126,11 +1136,16 @@ function parseShopeeSalesRows(rows) {
 
       const isVariation = variationRows.length > 0;
 
+      const saleModelId = normalizeIdNoPrefix(
+        findField(row, ["model id", "model_id", "modelid"])
+      );
+
       parsed.push({
         id: isVariation ? variationId : itemId,
         product,
         itemId,
         variationId,
+        saleModelId,
         paidRevenue,
         paidUnits,
         isVariation,
@@ -1217,6 +1232,7 @@ function processShopee(salesRowsRaw, costRowsRaw, ads, venforce, affiliates) {
   for (const row of costRows) {
     if (!row.id) continue;
     costMap.set(row.id, row);
+    if (row.modelId) costMap.set(row.modelId, row);
   }
 
   const unmatchedIdsSet = new Set();
@@ -1231,7 +1247,8 @@ function processShopee(salesRowsRaw, costRowsRaw, ads, venforce, affiliates) {
       excludedVariationIdsSet.add(sale.id);
     }
 
-    const costRow = costMap.get(sale.id);
+    const costRow =
+      (sale.saleModelId && costMap.get(sale.saleModelId)) || costMap.get(sale.id);
 
     if (!costRow || costRow.cost <= 0) {
       unmatchedIdsSet.add(sale.id);
@@ -1362,6 +1379,9 @@ function parseMeliRows(rows) {
           "preco unitario de venda do anuncio",
         ])
       ),
+      modelIdRaw: String(
+        findField(row, ["model id", "model_id", "modelid"]) ?? ""
+      ).trim(),
     };
   });
 }
@@ -1415,8 +1435,18 @@ function parseMeliCostRows(rows) {
       taxPercent = taxPercent * 100;
     }
 
+    const modelIdRaw = findField(row, [
+      "model_id",
+      "modelid",
+      "model id",
+      "id modelo",
+      "modelo",
+    ]);
+    const modelId = String(modelIdRaw ?? "").trim();
+
     parsed.push({
       id: normalizedId,
+      modelId,
       cost: round2(cost),
       taxPercent: round2(taxPercent),
     });
@@ -1439,6 +1469,16 @@ function buildMeliCostMap(rows) {
     const noPrefix = row.id.replace(/^MLB/i, "");
     if (noPrefix && !map.has(noPrefix)) {
       map.set(noPrefix, row);
+    }
+
+    if (row.modelId) {
+      const mNorm = normalizeId(row.modelId);
+      if (mNorm) {
+        if (!map.has(mNorm)) map.set(mNorm, row);
+        const mNoPrefix = mNorm.replace(/^MLB/i, "");
+        if (mNoPrefix && !map.has(mNoPrefix)) map.set(mNoPrefix, row);
+        if (mNoPrefix && !map.has(`MLB${mNoPrefix}`)) map.set(`MLB${mNoPrefix}`, row);
+      }
     }
   }
 
@@ -1580,7 +1620,8 @@ function processMeli(salesRowsRaw, costRowsRaw, ads, venforce, affiliates) {
 
   function pushCalculatedRow(item, totalRateado) {
     const id = normalizeId(item.adId || item.adIdRaw);
-    const cost = getCostForAd(id);
+    let cost = item.modelIdRaw ? getCostForAd(item.modelIdRaw) : null;
+    if (!cost) cost = getCostForAd(id);
 
     if (!cost || cost.cost <= 0) {
       unmatchedIds.add(id || item.adIdRaw || "SEM_ID");
