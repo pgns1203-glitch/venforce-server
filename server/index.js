@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 const crypto = require("crypto");
 const pool = require("./config/database");
-const { processarFechamento } = require("./utils/fechamento/process");
+const { processarFechamento, compilarFechamentos } = require("./utils/fechamento/process");
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -737,6 +737,30 @@ app.post("/fechamentos/upload", upload.single("file"), (req, res) => {
     }
 
     const resultado = processarFechamento(req.file.buffer);
+
+    res.json({
+      ok: true,
+      data: resultado
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    });
+  }
+});
+
+app.post("/fechamentos/compilar", upload.array("files", 20), (req, res) => {
+  try {
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ ok: false, error: "Arquivo não enviado" });
+    }
+
+    const buffers = files.map((file) => file.buffer);
+    const resultado = compilarFechamentos(buffers);
 
     res.json({
       ok: true,
