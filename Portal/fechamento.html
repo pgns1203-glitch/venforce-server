@@ -10,7 +10,7 @@
 </head>
 <body class="vf-page">
 
-  <div class="vf-main-with-sidebar">
+  <div class="vf-main-with-sidebar" style="width:100%;max-width:100%;">
     <main class="vf-content">
 
       <style scoped>
@@ -30,8 +30,13 @@
         }
 
         .fc-wrap {
+          width: 100%;
           max-width: 100%;
           padding: 28px 32px 48px;
+          box-sizing: border-box;
+        }
+
+        .fc-wrap {
           border-radius: 28px;
           background: radial-gradient(circle at top, #4c1d95 0%, #1f103d 35%, #09090b 100%);
           color: var(--fc-text);
@@ -288,14 +293,14 @@
         }
 
         .fc-content-panel {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
           margin-top: 20px;
           padding: 24px;
           border-radius: 24px;
-          background: var(--fc-panel-bg);
-          border: 1px solid var(--fc-panel-br);
-          width: 100%;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
+          background: rgba(18,12,34,0.94);
+          border: 1px solid rgba(255,255,255,0.1);
         }
 
         .fc-section-title {
@@ -306,7 +311,7 @@
         }
 
         .fc-table {
-          min-width: 1100px;
+          min-width: 1200px;
           width: 100%;
           border-collapse: collapse;
         }
