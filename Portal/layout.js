@@ -82,7 +82,7 @@
   function buildNavLinks(user) {
     const links = [
       { label: "Dashboard", href: "dashboard.html", icon: "activity", adminOnly: false },
-      { label: "Fechamento", href: "fechamento.html", icon: "activity", adminOnly: false },
+      { label: "Painel de análise de conversão", href: "fechamento.html", icon: "activity", adminOnly: false },
       { label: "Scans", href: "scans.html", icon: "bar-chart", adminOnly: false },
       { label: "Clientes", href: "clientes.html", icon: "users", adminOnly: false },
       { label: "Callbacks", href: "callbacks.html", icon: "repeat", adminOnly: false },
@@ -130,7 +130,7 @@
         <span style="width:36px;height:36px;background-color:var(--vf-primary);background-image:linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 55%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 8px rgba(var(--vf-primary-rgb),.2);">
           ${svgIcon("activity")}
         </span>
-        <span>Venforce</span>
+        <span>VenforceGo</span>
       </a>
     `;
 
