@@ -1283,16 +1283,27 @@ function parseShopeeSalesRows(rows) {
         ])
       );
 
-      const impressions = toNumber(
-        findField(row, [
-          "impressao do produto",
-          "impressão do produto",
-          "impressoes do produto",
-          "impressões do produto",
-        ])
+const impressionsRaw = findField(row, [
+  "impressao do produto",
+  "impressão do produto",
+  "impressoes do produto",
+  "impressões do produto",
+]);
+
+const impressions = toNumber(impressionsRaw);
+
+const raw = String(impressionsRaw || "").trim();
+
+const isZeroImpressions =
+  impressions === 0 ||
+  raw === "-" ||
+  raw === "–" ||
+  raw === "";
+
+return !!variationId && revenue > 0 && paidUnits > 0 && isZeroImpressions;
       );
 
-      return !!variationId && revenue > 0 && paidUnits > 0 && impressions === 0;
+     
     });
 
     const rowsToUse = variationRows.length > 0 ? variationRows : groupRows;
