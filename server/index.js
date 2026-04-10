@@ -1457,7 +1457,9 @@ function processShopee(salesRowsRaw, costRowsRaw, ads, venforce, affiliates) {
     }
 
     const costRow =
-      (sale.saleModelId && costMap.get(sale.saleModelId)) || costMap.get(sale.id);
+      (sale.saleModelId && costMap.get(sale.saleModelId)) ||
+      costMap.get(sale.id) ||
+      costMap.get(sale.itemId);
 
     if (!costRow || costRow.cost <= 0) {
       unmatchedIdsSet.add(sale.id);
