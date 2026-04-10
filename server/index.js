@@ -1308,10 +1308,6 @@ const isZeroImpressions =
     const rowsToUse = variationRows.length > 0 ? variationRows : groupRows;
 
     for (const row of rowsToUse) {
-      const variationId = normalizeIdNoPrefix(
-        findField(row, ["id da variacao", "id da variação", "variation id"])
-      );
-
       const paidRevenue = toNumber(
         findField(row, [
           "vendas (pedido pago) (brl)",
@@ -1330,24 +1326,31 @@ const isZeroImpressions =
         ])
       );
 
-      const variationStatus = normalizeText(
-        findField(row, ["status atual da variacao", "status atual da variação"])
-      );
-
       const product = String(
         findField(row, ["produto", "nome do produto", "product name"]) || ""
       ).trim();
 
-      if (paidRevenue <= 0 || paidUnits <= 0) continue;
+      const variationId = normalizeIdNoPrefix(
+        findField(row, ["id da variacao", "id da variação", "variation id"])
+      );
 
-      const isVariation = variationRows.length > 0;
+      const variationStatus = normalizeText(
+        findField(row, ["status atual da variacao", "status atual da variação"])
+      );
 
       const saleModelId = normalizeIdNoPrefix(
         findField(row, ["model id", "model_id", "modelid"])
       );
 
+      const isVariation = variationRows.length > 0;
+      const id = isVariation ? variationId : itemId;
+
+      console.log("[DEBUG parseShopeeSalesRows] id:", id, "paidRevenue:", paidRevenue, "paidUnits:", paidUnits);
+
+      if (!id || paidRevenue <= 0 || paidUnits <= 0) continue;
+
       parsed.push({
-        id: isVariation ? variationId : itemId,
+        id,
         product,
         itemId,
         variationId,
