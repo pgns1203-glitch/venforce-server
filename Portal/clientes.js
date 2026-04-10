@@ -123,6 +123,9 @@ function renderClientes(clientes) {
       <td style="text-align:center;">
         <span class="${ativo ? "base-status--active" : "base-status--inactive"}">${ativo ? "Ativo" : "Inativo"}</span>
       </td>
+      <td id="ml-cell-${escapeHTML(c.slug || "")}" style="text-align:center;">
+        <span style="color:var(--vf-text-l);font-size:.8rem;">…</span>
+      </td>
       <td style="text-align:center;">
         <button class="vf-btn-danger-sm" data-action="delete" data-slug="${escapeHTML(c.slug || "")}">Excluir</button>
       </td>
@@ -162,9 +165,62 @@ function renderClientes(clientes) {
     });
   });
 
-  showTable();
-}
 
+showTable();
+// Disparar fetches de status ML em paralelo, sem bloquear a renderização
+clientes.forEach(c => fetchMlStatus(c.slug || ""));
+}
+ 
+async function fetchMlStatus(slug) {
+  const cell = document.getElementById(`ml-cell-${slug}`);
+  if (!cell) return;
+  try {
+    const res = await fetch(`${API_BASE}/clientes/${encodeURIComponent(slug)}/ml-status`, {
+      headers: { Authorization: "Bearer " + TOKEN }
+    });
+    if (!res.ok) {
+      cell.innerHTML = `<span style="color:var(--vf-text-l);font-size:.8rem;">—</span>`;
+      return;
+    }
+    const data = await res.json();
+    if (data.conectado) {
+      cell.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
+          <span class="base-status--active">Conectado</span>
+          <button type="button" class="vf-btn-danger-sm" data-action="ml-desconectar"
+            data-slug="${escapeHTML(slug)}" style="font-size:.7rem;padding:2px 8px;">Desvincular</button>
+        </div>`;
+      cell.querySelector('[data-action="ml-desconectar"]').addEventListener("click", () => {
+        if (confirm(`Desvincular conta ML do cliente "${slug}"?`)) desvincularMl(slug, cell);
+      });
+    } else {
+      cell.innerHTML = `<a href="${API_BASE}/ml/conectar/${encodeURIComponent(slug)}"
+        target="_blank" class="vf-btn-secondary"
+        style="font-size:.75rem;padding:4px 12px;text-decoration:none;display:inline-block;">Conectar ML</a>`;
+    }
+  } catch {
+    cell.innerHTML = `<span style="color:var(--vf-text-l);font-size:.8rem;">—</span>`;
+  }
+}
+ 
+async function desvincularMl(slug, cell) {
+  cell.innerHTML = `<span style="color:var(--vf-text-l);font-size:.8rem;">Desvinculando…</span>`;
+  try {
+    const res = await fetch(`${API_BASE}/clientes/${encodeURIComponent(slug)}/ml-token`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + TOKEN }
+    });
+    if (res.status === 401) { clearSession(); return; }
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.erro || `HTTP ${res.status}`);
+    }
+    fetchMlStatus(slug);
+  } catch (err) {
+    alert("Erro ao desvincular: " + err.message);
+    fetchMlStatus(slug);
+  }
+}
 async function deleteCliente(slug, btn) {
   btn.disabled = true;
   btn.textContent = "Excluindo…";
