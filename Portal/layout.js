@@ -95,6 +95,7 @@
       { label: "Fechamento Financeiro", href: "financeiro.html", icon: "activity", adminOnly: false },
       { label: "Clientes", href: "clientes.html", icon: "users", adminOnly: false },
       { label: "Callbacks", href: "callbacks.html", icon: "repeat", adminOnly: false },
+      { label: "Tokens ML", href: "ml-tokens.html", icon: "shield", adminOnly: true },
       { label: "Usuários", href: "usuarios.html", icon: "shield", adminOnly: true },
     ];
     return links

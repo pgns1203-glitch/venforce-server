@@ -561,6 +561,28 @@ app.get("/admin/users", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/admin/ml-tokens", authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        c.id AS cliente_id,
+        c.nome AS cliente_nome,
+        c.slug AS cliente_slug,
+        t.ml_user_id,
+        t.access_token,
+        t.refresh_token,
+        t.expires_at,
+        t.updated_at
+      FROM clientes c
+      INNER JOIN ml_tokens t ON t.cliente_id = c.id
+      ORDER BY c.nome ASC
+    `);
+    res.json({ ok: true, tokens: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
 app.get("/clientes", authMiddleware, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(

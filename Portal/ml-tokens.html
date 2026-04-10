@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venforce — Tokens ML</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235A2A8F'/><text x='16' y='22' font-size='18' fill='white' text-anchor='middle' font-family='sans-serif' font-weight='bold'>V</text></svg>">
+</head>
+<body class="vf-page">
+
+  <div class="vf-main-with-sidebar">
+    <main class="vf-content">
+
+      <div class="vf-page-header">
+        <h2>Tokens ML</h2>
+        <p>Cofre de tokens Mercado Livre por cliente (uso em automações externas). Acesso restrito a administradores.</p>
+      </div>
+
+      <div class="vf-card">
+        <div class="vf-card-header">
+          <h5>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Tokens por cliente
+          </h5>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <span id="tokens-count" class="vf-badge" style="display:none;">0</span>
+            <button type="button" id="btn-recarregar" class="vf-btn-secondary" style="padding:0.5rem 1rem;margin:0;">Recarregar</button>
+          </div>
+        </div>
+
+        <div id="tokens-content" style="min-height:200px;">
+          <div id="state-loading" class="vf-loading">
+            <div class="loading-dots"><span></span><span></span><span></span></div>
+            <p>Carregando tokens…</p>
+          </div>
+          <div id="state-table" class="vf-table-wrapper" style="display:none;">
+            <table class="vf-table">
+              <thead>
+                <tr>
+                  <th style="width:50px;">#</th>
+                  <th>Cliente</th>
+                  <th style="width:140px;">Slug</th>
+                  <th style="width:120px;">ML User ID</th>
+                  <th style="min-width:200px;">Access Token</th>
+                  <th style="min-width:200px;">Refresh Token</th>
+                  <th style="width:200px;">Expira em</th>
+                  <th style="width:160px;">Atualizado</th>
+                </tr>
+              </thead>
+              <tbody id="tokens-tbody"></tbody>
+            </table>
+          </div>
+          <div id="state-empty" class="vf-empty-state" style="display:none;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <p>Nenhum cliente com conta ML conectada.</p>
+          </div>
+          <div id="state-error" class="vf-error-state" style="display:none;">
+            <p id="error-message">Erro ao carregar dados.</p>
+            <button id="btn-retry" class="vf-btn-retry">Tentar novamente</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="layout.js"></script>
+  <script src="ml-tokens.js"></script>
+</body>
+</html>
