@@ -1270,6 +1270,7 @@ function parseShopeeSalesRows(rows) {
       const revenue = toNumber(
         findField(row, [
           "vendas (pedido pago) (brl)",
+          "Vendas (Pedido pago) (BRL)",
           "vendas (pedido pago)",
           "pedido pago (brl)",
         ])
@@ -1278,6 +1279,7 @@ function parseShopeeSalesRows(rows) {
       const paidUnits = toNumber(
         findField(row, [
           "unidades (pedido pago)",
+          "Unidades (Pedido pago)",
           "unidades pagas",
           "paid units",
         ])
@@ -1313,6 +1315,7 @@ const isZeroImpressions =
       const paidRevenue = toNumber(
         findField(row, [
           "vendas (pedido pago) (brl)",
+          "Vendas (Pedido pago) (BRL)",
           "vendas (pedido pago)",
           "pedido pago (brl)",
         ])
@@ -1321,6 +1324,7 @@ const isZeroImpressions =
       const paidUnits = toNumber(
         findField(row, [
           "unidades (pedido pago)",
+          "Unidades (Pedido pago)",
           "unidades pagas",
           "paid units",
         ])
