@@ -25,6 +25,7 @@ app.options(/.*/, cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
+app.use("/downloads", express.static(path.join(__dirname, "downloads")));
 
 // UPLOAD (memória)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
