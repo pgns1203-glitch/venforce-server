@@ -21,6 +21,11 @@ function escapeHTML(s) {
   return d.innerHTML;
 }
 
+function getMlConectarLink(slug) {
+  const base = "https://venforce-server.onrender.com";
+  return `${base}/ml/conectar/${encodeURIComponent(slug)}`;
+}
+
 function slugify(nome) {
   return String(nome || "")
     .toLowerCase()
@@ -194,9 +199,45 @@ async function fetchMlStatus(slug) {
         if (confirm(`Desvincular conta ML do cliente "${slug}"?`)) desvincularMl(slug, cell);
       });
     } else {
-      cell.innerHTML = `<a href="${API_BASE}/ml/conectar/${encodeURIComponent(slug)}"
-        target="_blank" class="vf-btn-secondary"
-        style="font-size:.75rem;padding:4px 12px;text-decoration:none;display:inline-block;">Conectar ML</a>`;
+      const link = getMlConectarLink(slug);
+      cell.innerHTML = `
+  <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
+    <a href="${link}" target="_blank" class="vf-btn-secondary"
+      style="font-size:.75rem;padding:4px 12px;text-decoration:none;display:inline-block;">
+      Conectar ML
+    </a>
+    <button type="button"
+      data-action="copy-ml-link"
+      data-link="${escapeHTML(link)}"
+      data-slug="${escapeHTML(slug)}"
+      class="vf-btn-secondary"
+      style="font-size:.75rem;padding:4px 10px;">
+      Copiar link
+    </button>
+  </div>`;
+
+// Bind do botão copiar imediatamente após setar innerHTML
+const copyBtn = cell.querySelector('[data-action="copy-ml-link"]');
+if (copyBtn) {
+  copyBtn.addEventListener("click", async () => {
+    const url = copyBtn.getAttribute("data-link") || "";
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      const prev = copyBtn.textContent;
+      copyBtn.textContent = "Copiado!";
+      copyBtn.style.color = "var(--vf-success)";
+      copyBtn.style.borderColor = "rgba(4,120,87,.25)";
+      setTimeout(() => {
+        copyBtn.textContent = prev;
+        copyBtn.style.color = "";
+        copyBtn.style.borderColor = "";
+      }, 2000);
+    } catch {
+      alert("Não foi possível copiar o link.");
+    }
+  });
+}
     }
   } catch {
     cell.innerHTML = `<span style="color:var(--vf-text-l);font-size:.8rem;">—</span>`;
