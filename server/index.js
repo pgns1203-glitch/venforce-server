@@ -10,6 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const pool = require("./config/database");
 const { processarFechamento, compilarFechamentos } = require("./utils/fechamento/process");
+const { getValidMlTokenByCliente } = require("./utils/mlClient");
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -86,45 +87,6 @@ function parsePlanilha(buffer, originalName) {
 
 function gerarApiKey() {
   return "vf_" + crypto.randomBytes(32).toString("hex");
-}
-
-async function getValidMlTokenByCliente(clienteId) {
-  const result = await pool.query("SELECT * FROM ml_tokens WHERE cliente_id = $1", [clienteId]);
-  const row = result.rows[0];
-  if (!row) throw new Error("Cliente não possui token ML");
-
-  const now = Date.now();
-  const expiresAt = new Date(row.expires_at).getTime();
-  const msLeft = expiresAt - now;
-  const fiveMin = 5 * 60 * 1000;
-
-  if (msLeft < fiveMin) {
-    const tokenRes = await fetch("https://api.mercadolibre.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: ML_CLIENT_ID,
-        client_secret: ML_CLIENT_SECRET,
-        refresh_token: row.refresh_token
-      })
-    });
-    const data = await tokenRes.json();
-    if (!tokenRes.ok) {
-      throw new Error(data?.message || JSON.stringify(data));
-    }
-    const { access_token, refresh_token, expires_in } = data;
-    const newExpires = new Date(Date.now() + (expires_in || 0) * 1000);
-    const newRefresh = refresh_token || row.refresh_token;
-    await pool.query(
-      `UPDATE ml_tokens SET access_token = $1, refresh_token = $2, expires_at = $3, updated_at = NOW()
-       WHERE cliente_id = $4`,
-      [access_token, newRefresh, newExpires, clienteId]
-    );
-    return access_token;
-  }
-
-  return row.access_token;
 }
 
 // AUTH MIDDLEWARE
