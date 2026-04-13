@@ -459,7 +459,17 @@ app.post("/importar-base", authMiddleware, upload.single("arquivo"), async (req,
         [slug, nomeBaseOriginal]
       );
       const baseId = baseResult.rows[0].id;
-      await client.query(`INSERT INTO user_bases (user_id, base_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [req.user.id, baseId]);
+      // vincular base a TODOS usuários
+const users = await client.query(`SELECT id FROM users`);
+
+for (const u of users.rows) {
+  await client.query(
+    `INSERT INTO user_bases (user_id, base_id)
+     VALUES ($1, $2)
+     ON CONFLICT DO NOTHING`,
+    [u.id, baseId]
+  );
+}
       await client.query("DELETE FROM custos WHERE base_id = $1", [baseId]);
       for (const linha of linhas) {
         await client.query(
@@ -502,15 +512,40 @@ app.post("/bases/:baseId/desabilitar", authMiddleware, async (req, res) => {
 app.delete("/bases/:baseId", authMiddleware, async (req, res) => {
   try {
     const param = req.params.baseId;
-    // Aceita tanto ID numérico quanto slug
-    const acesso = await pool.query(
-      `SELECT b.id FROM bases b JOIN user_bases ub ON ub.base_id = b.id
-       WHERE (b.id = $1 OR b.slug = $2) AND ub.user_id = $3`,
-      [parseInt(param) || 0, normalizarSlug(param), req.user.id]
-    );
-    if (!acesso.rows.length) return res.status(404).json({ ok: false, erro: "Base não encontrada" });
-    await pool.query("DELETE FROM bases WHERE id = $1", [acesso.rows[0].id]);
+
+    let baseId;
+
+    if (req.user.role === "admin") {
+      const result = await pool.query(
+        `SELECT id FROM bases WHERE id = $1 OR slug = $2`,
+        [parseInt(param) || 0, normalizarSlug(param)]
+      );
+
+      if (!result.rows.length) {
+        return res.status(404).json({ ok: false, erro: "Base não encontrada" });
+      }
+
+      baseId = result.rows[0].id;
+
+    } else {
+      const acesso = await pool.query(
+        `SELECT b.id FROM bases b
+         JOIN user_bases ub ON ub.base_id = b.id
+         WHERE (b.id = $1 OR b.slug = $2) AND ub.user_id = $3`,
+        [parseInt(param) || 0, normalizarSlug(param), req.user.id]
+      );
+
+      if (!acesso.rows.length) {
+        return res.status(404).json({ ok: false, erro: "Base não encontrada" });
+      }
+
+      baseId = acesso.rows[0].id;
+    }
+
+    await pool.query("DELETE FROM bases WHERE id = $1", [baseId]);
+
     res.json({ ok: true, mensagem: "Base excluída com sucesso" });
+
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
   }
