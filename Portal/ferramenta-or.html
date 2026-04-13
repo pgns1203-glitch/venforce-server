@@ -30,23 +30,22 @@
           </h5>
         </div>
         <div style="padding:1.5rem 1.75rem;">
-          <div style="font-size:1.25rem;font-weight:800;letter-spacing:-0.02em;color:var(--vf-text);margin-bottom:0.75rem;">
-            Ferramenta OR — Script
+          <div id="mlbs-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+
+          <button type="button" id="btn-add-mlb" class="vf-btn-secondary"
+            style="width:auto;margin:0;margin-bottom:20px;">
+            + Adicionar MLB
+          </button>
+
+          <div style="display:flex;justify-content:flex-end;">
+            <button type="button" id="btn-baixar" class="vf-btn-primary"
+              style="width:auto;margin:0;min-width:240px;">
+              <span id="btn-baixar-text">Baixar ferramenta personalizada</span>
+              <span id="btn-baixar-spinner" class="btn-spinner" style="display:none;"></span>
+            </button>
           </div>
-          <a
-            class="vf-btn-primary"
-            role="button"
-            href="https://raw.githubusercontent.com/venforcecompany-sudo/venforce-server/main/server/downloads/ferramenta-or.zip"
-            download
-            style="width:auto;display:inline-flex;margin-top:0;"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="12" y1="3" x2="12" y2="16"></line>
-              <polyline points="7 11 12 16 17 11"></polyline>
-              <line x1="5" y1="21" x2="19" y2="21"></line>
-            </svg>
-            Baixar ferramenta (.zip)
-          </a>
+
+          <div id="or-status" style="margin-top:12px;font-size:.875rem;display:none;"></div>
         </div>
       </div>
 
@@ -130,6 +129,6 @@
   </div>
 
   <script src="layout.js"></script>
-  <script>initLayout();</script>
+  <script src="ferramenta-or.js"></script>
 </body>
 </html>

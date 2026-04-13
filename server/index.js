@@ -7,6 +7,8 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const jwt = require("jsonwebtoken");
 const path = require("path");
+const fs = require("fs");
+const archiver = require("archiver");
 const crypto = require("crypto");
 const pool = require("./config/database");
 const { processarFechamento, compilarFechamentos } = require("./utils/fechamento/process");
@@ -641,6 +643,65 @@ app.delete("/clientes/:slug", authMiddleware, requireAdmin, async (req, res) => 
     res.json({ ok: true, mensagem: "Cliente removido com sucesso." });
   } catch (err) {
     res.status(500).json({ ok: false, erro: err.message });
+  }
+});
+
+app.post("/download-ferramenta-or", authMiddleware, async (req, res) => {
+  try {
+    const { mlbs } = req.body;
+
+    if (!Array.isArray(mlbs) || !mlbs.length) {
+      return res.status(400).json({ ok: false, erro: "Informe ao menos um MLB." });
+    }
+
+    for (const item of mlbs) {
+      if (!item.mlb || !item.quantidade_padrao || !item.preco_final) {
+        return res.status(400).json({
+          ok: false,
+          erro: "Cada item deve ter mlb, quantidade_padrao e preco_final."
+        });
+      }
+    }
+
+    const config = {
+      mlbs: mlbs.map((item) => ({
+        mlb: String(item.mlb).trim(),
+        quantidade_padrao: Number(item.quantidade_padrao),
+        preco_final: String(item.preco_final).trim(),
+      })),
+      headless: false,
+      slow_mo: 50,
+    };
+
+    const configJson = JSON.stringify(config, null, 2);
+    const downloadsDir = path.join(__dirname, "downloads");
+
+    const v1Path     = path.join(downloadsDir, "v1_10_1.py");
+    const criarPath  = path.join(downloadsDir, "Criar_ORs.py");
+
+    if (!fs.existsSync(v1Path) || !fs.existsSync(criarPath)) {
+      return res.status(500).json({ ok: false, erro: "Arquivos Python não encontrados em server/downloads/." });
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", "attachment; filename=ferramenta-or.zip");
+
+    const archive = archiver("zip", { zlib: { level: 6 } });
+
+    archive.on("error", (err) => {
+      console.error("[download-ferramenta-or] archiver erro:", err.message);
+      if (!res.headersSent) res.status(500).json({ ok: false, erro: err.message });
+    });
+
+    archive.pipe(res);
+    archive.file(v1Path,    { name: "v1_10_1.py" });
+    archive.file(criarPath, { name: "Criar_ORs.py" });
+    archive.append(configJson, { name: "config.json" });
+
+    await archive.finalize();
+  } catch (err) {
+    console.error("[download-ferramenta-or] erro:", err.message);
+    if (!res.headersSent) res.status(500).json({ ok: false, erro: err.message });
   }
 });
 
