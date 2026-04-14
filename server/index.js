@@ -1048,10 +1048,10 @@ app.get("/callback", async (req, res) => {
   }
 });
 
-app.post("/fechamentos/upload", upload.single("file"), (req, res) => {
+app.post("/fechamentos/upload", authMiddleware, upload.single("file"), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "Arquivo não enviado" });
+      return res.status(400).json({ ok: false, erro: "Arquivo não enviado" });
     }
 
     const resultado = processarFechamento(req.file.buffer);
@@ -1065,16 +1065,16 @@ app.post("/fechamentos/upload", upload.single("file"), (req, res) => {
     console.error(err);
     res.status(500).json({
       ok: false,
-      error: err.message
+      erro: err.message
     });
   }
 });
 
-app.post("/fechamentos/compilar", upload.array("files", 20), (req, res) => {
+app.post("/fechamentos/compilar", authMiddleware, upload.array("files", 20), (req, res) => {
   try {
     const files = req.files || [];
     if (!files.length) {
-      return res.status(400).json({ ok: false, error: "Arquivo não enviado" });
+      return res.status(400).json({ ok: false, erro: "Arquivo não enviado" });
     }
 
     const buffers = files.map((file) => file.buffer);
@@ -1089,7 +1089,7 @@ app.post("/fechamentos/compilar", upload.array("files", 20), (req, res) => {
     console.error(err);
     res.status(500).json({
       ok: false,
-      error: err.message
+      erro: err.message
     });
   }
 });

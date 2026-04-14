@@ -427,4 +427,24 @@ function processarFechamento(buffer) {
   }
 }
 
-module.exports = { processarFechamento };
+function compilarFechamentos(buffers) {
+  if (!Array.isArray(buffers)) {
+    throw new Error("Lista de arquivos inválida.");
+  }
+
+  const resultados = [];
+
+  for (let i = 0; i < buffers.length; i++) {
+    const buffer = buffers[i];
+    if (!Buffer.isBuffer(buffer)) {
+      resultados.push({ index: i, error: "Arquivo inválido." });
+      continue;
+    }
+
+    resultados.push({ index: i, ...processarFechamento(buffer) });
+  }
+
+  return resultados;
+}
+
+module.exports = { processarFechamento, compilarFechamentos };
