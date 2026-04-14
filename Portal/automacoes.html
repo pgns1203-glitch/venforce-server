@@ -32,10 +32,14 @@
         <div style="padding:1.5rem 1.75rem;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:980px;">
             <div class="vf-form-group" style="margin:0;">
-              <label for="automacoes-cliente">Selecionar cliente</label>
-              <select id="automacoes-cliente" class="vf-input">
-                <option value="">Carregando...</option>
-              </select>
+              <label for="automacoes-cliente-search">Buscar cliente</label>
+              <input id="automacoes-cliente-search" class="vf-input" type="search" placeholder="Digite nome ou slug" autocomplete="off" />
+              <div class="vf-form-group" style="margin:10px 0 0 0;">
+                <label for="automacoes-cliente">Selecionar cliente</label>
+                <select id="automacoes-cliente" class="vf-input">
+                  <option value="">Carregando...</option>
+                </select>
+              </div>
             </div>
             <div class="vf-form-group" style="margin:0;">
               <label for="automacoes-base">Selecionar base</label>

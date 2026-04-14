@@ -12,6 +12,8 @@ const user = JSON.parse(localStorage.getItem("vf-user") || "{}");
 if (user.role !== "admin") window.location.replace("dashboard.html");
 initLayout();
 
+let ALL_CLIENTES = [];
+
 function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem("vf-user");
@@ -43,6 +45,34 @@ function setClientesOptions(select, clientes) {
     const opt = new Option(`${nome} (${slug})`, slug);
     select.appendChild(opt);
   });
+}
+
+function applyClienteSearchFilter({ keepValueIfPossible = true } = {}) {
+  const input = document.getElementById("automacoes-cliente-search");
+  const select = document.getElementById("automacoes-cliente");
+  if (!select) return;
+
+  const q = (input?.value || "").trim().toLowerCase();
+  const filtered = !q
+    ? ALL_CLIENTES
+    : ALL_CLIENTES.filter((c) => {
+        const nome = (c?.nome || "").toString().toLowerCase();
+        const slug = (c?.slug || "").toString().toLowerCase();
+        return nome.includes(q) || slug.includes(q);
+      });
+
+  const currentValue = select.value || "";
+  setClientesOptions(select, filtered);
+
+  if (keepValueIfPossible && currentValue) {
+    const stillThere = filtered.some((c) => (c?.slug || "") === currentValue);
+    if (stillThere) {
+      select.value = currentValue;
+    } else {
+      select.value = "";
+      setStatus("Cliente atual não está no filtro. Selecione um cliente.", "var(--vf-text-m)");
+    }
+  }
 }
 
 function setBasesOptions(select, bases) {
@@ -81,13 +111,15 @@ async function loadClientes() {
     const data = await res.json().catch(() => ({}));
     const clientes = Array.isArray(data.clientes) ? data.clientes : (Array.isArray(data) ? data : []);
 
-    setClientesOptions(select, clientes);
+    ALL_CLIENTES = clientes;
+    applyClienteSearchFilter({ keepValueIfPossible: false });
     if (select) select.disabled = false;
 
     if (!clientes.length) {
       setStatus("Nenhum cliente encontrado.", "var(--vf-text-m)");
     }
   } catch (err) {
+    ALL_CLIENTES = [];
     if (select) {
       select.disabled = true;
       select.innerHTML = `<option value="">Erro ao carregar clientes</option>`;
@@ -244,6 +276,10 @@ document.getElementById("automacoes-cliente")?.addEventListener("change", (e) =>
     return;
   }
   setStatus(`Cliente selecionado: ${escapeHTML(slug)} (ações: em breve)`, "var(--vf-success)");
+});
+
+document.getElementById("automacoes-cliente-search")?.addEventListener("input", () => {
+  applyClienteSearchFilter({ keepValueIfPossible: true });
 });
 
 document.getElementById("btn-precificacao-preview")?.addEventListener("click", previewPrecificacao);
