@@ -388,6 +388,14 @@ body {
 .vf-content.vf-content-wide {
   max-width: 1320px;
 }
+/* Automações: largura intermediária e alinhada mais à esquerda (sem virar full-width) */
+.vf-page-automacoes .vf-content {
+  max-width: 1240px;
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 2rem;
+}
 .vf-page-header { margin-bottom: 2rem; animation: fadeUp 0.45s ease-out both; }
 .vf-page-header h2 {
   font-size: clamp(1.5rem, 2.5vw, 1.875rem);
