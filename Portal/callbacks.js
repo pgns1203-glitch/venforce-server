@@ -7,6 +7,8 @@ function getToken() {
   return t;
 }
 const TOKEN = getToken();
+const user = JSON.parse(localStorage.getItem("vf-user") || "{}");
+if (user.role !== "admin") window.location.replace("dashboard.html");
 initLayout();
 
 function clearSession() {
