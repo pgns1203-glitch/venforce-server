@@ -690,15 +690,20 @@ app.get("/automacoes/precificacao/preview-ml", authMiddleware, requireAdmin, asy
       "SELECT produto_id, custo_produto, imposto_percentual, taxa_fixa FROM custos WHERE base_id = $1",
       [base.id]
     );
-    const custosMap = new Map();
+    const custosMapExact = new Map();
+    const custosMapNorm = new Map();
+    const custosMapNumeric = new Map();
     custosRes.rows.forEach((row) => {
       const key = String(row.produto_id || "").trim();
       if (!key) return;
-      custosMap.set(key, {
+      const payload = {
         custoProduto: Number(row.custo_produto),
         impostoPercentual: Number(row.imposto_percentual),
         taxaFixa: Number(row.taxa_fixa),
-      });
+      };
+      custosMapExact.set(key, payload);
+      custosMapNorm.set(key.toUpperCase(), payload);
+      if (/^\d+$/.test(key)) custosMapNumeric.set(key, payload);
     });
 
     // ML (somente leitura): usar ml_user_id já vinculado ao cliente
@@ -739,8 +744,32 @@ app.get("/automacoes/precificacao/preview-ml", authMiddleware, requireAdmin, asy
     const linhas = details.map((entry) => {
       const body = entry?.body || null;
       const itemId = String(body?.id || entry?.id || "").trim();
+      const itemNorm = itemId.toUpperCase();
 
-      const baseRow = custosMap.get(itemId) || null;
+      // Matching conservador:
+      // 1) match exato
+      // 2) match normalizado (trim + uppercase)
+      // 3) se item começar com MLB, tenta o número contra produto_id numérico da base
+      // Observação: MLBU NÃO é tratado como equivalente automático a MLB numérico.
+      let baseRow =
+        custosMapExact.get(itemId) ||
+        custosMapNorm.get(itemNorm) ||
+        null;
+
+      const observacoes = [];
+
+      if (!baseRow && itemNorm.startsWith("MLBU")) {
+        observacoes.push("item MLBU não é casado automaticamente com produto_id numérico da base");
+      }
+
+      if (!baseRow && itemNorm.startsWith("MLB") && !itemNorm.startsWith("MLBU")) {
+        const num = itemNorm.slice(3).match(/^\d+/)?.[0] || "";
+        if (num && custosMapNumeric.has(num)) {
+          baseRow = custosMapNumeric.get(num);
+          observacoes.push("match realizado pelo número do MLB (base sem prefixo)");
+        }
+      }
+
       const custoProduto = baseRow ? baseRow.custoProduto : null;
       const impostoPercentual = baseRow ? baseRow.impostoPercentual : null;
       const taxaFixa = baseRow ? baseRow.taxaFixa : null;
@@ -760,7 +789,6 @@ app.get("/automacoes/precificacao/preview-ml", authMiddleware, requireAdmin, asy
       const lucroContribuicaoPreview = null;
       const margemContribuicaoPreview = null;
 
-      const observacoes = [];
       if (!baseRow) observacoes.push("Sem correspondência na base (produto_id não encontrado).");
       if (comissaoMarketplace === null) observacoes.push("comissaoMarketplace=null (não obtida nesta etapa por segurança/read-only).");
       if (frete === null) observacoes.push("frete=null (não obtido nesta etapa por segurança/read-only).");
