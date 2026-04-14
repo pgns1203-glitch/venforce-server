@@ -711,11 +711,12 @@ app.get("/automacoes/precificacao/preview-ml", authMiddleware, requireAdmin, asy
     }
     const mlUserId = tokenRow.rows[0].ml_user_id;
 
+    // Somente leitura (anúncios/dados): esta rota faz apenas GET no ML.
+    // Refresh OAuth é permitido aqui só para evitar quebra por expiração do access_token; isso não altera anúncios/preços/estoque/campanhas.
     // 1) Buscar ids de itens ativos do cliente (paginado)
     const search = await mlFetch(
       cliente.id,
-      `/users/${mlUserId}/items/search?status=active&offset=${offset}&limit=${limit}`,
-      { noRefresh: true }
+      `/users/${mlUserId}/items/search?status=active&offset=${offset}&limit=${limit}`
     );
     if (!search.ok) {
       return res.status(search.status).json({ ok: false, erro: search.data?.message || "Erro ao buscar itens no ML.", status: search.status, data: search.data });
@@ -728,7 +729,7 @@ app.get("/automacoes/precificacao/preview-ml", authMiddleware, requireAdmin, asy
     let details = [];
     if (ids.length > 0) {
       // Observação: o endpoint do ML espera ids separados por vírgula; não codificar vírgulas evita incompatibilidades.
-      const batch = await mlFetch(cliente.id, `/items?ids=${ids.join(",")}`, { noRefresh: true });
+      const batch = await mlFetch(cliente.id, `/items?ids=${ids.join(",")}`);
       if (!batch.ok) {
         return res.status(batch.status).json({ ok: false, erro: batch.data?.message || "Erro ao buscar detalhes dos itens no ML.", status: batch.status, data: batch.data });
       }
