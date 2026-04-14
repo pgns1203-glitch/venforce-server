@@ -390,7 +390,7 @@ body {
 }
 /* Automações: largura intermediária CENTRALIZADA (sem virar full-width) */
 .vf-page-automacoes .vf-content {
-  max-width: 1320px;
+  max-width: 1560px;
   margin-inline: auto;
   padding-left: clamp(1.25rem, 3vw, 2.25rem);
   padding-right: clamp(1.25rem, 3vw, 2.25rem);
