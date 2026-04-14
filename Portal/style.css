@@ -388,13 +388,12 @@ body {
 .vf-content.vf-content-wide {
   max-width: 1320px;
 }
-/* Automações: largura intermediária e alinhada mais à esquerda (sem virar full-width) */
+/* Automações: largura intermediária CENTRALIZADA (sem virar full-width) */
 .vf-page-automacoes .vf-content {
-  max-width: 1240px;
-  margin-left: 0;
-  margin-right: auto;
-  padding-left: 1.25rem;
-  padding-right: 2rem;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-left: clamp(1.25rem, 3vw, 2.25rem);
+  padding-right: clamp(1.25rem, 3vw, 2.25rem);
 }
 .vf-page-header { margin-bottom: 2rem; animation: fadeUp 0.45s ease-out both; }
 .vf-page-header h2 {
